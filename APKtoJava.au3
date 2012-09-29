@@ -1,10 +1,11 @@
 #region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=apktojavaicon_trans.ico
 #AutoIt3Wrapper_Outfile=APKtoJava.exe
+#AutoIt3Wrapper_Outfile_x64=APKtoJava_x64.exe
 #AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=©2012 broodplank.net
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.6
+#AutoIt3Wrapper_Res_Fileversion=0.0.0.7
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -105,12 +106,12 @@ Opt("WinTitleMatchMode", 2)
 
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali
 
-GUICreate("APK to Java v0.6 BETA (by broodplank)", 550, 450)
+GUICreate("APK to Java v0.7 BETA (by broodplank)", 550, 450)
 
 GUISetFont(8, 8, 0, "Verdana")
 
 GUICtrlCreateLabel("Log:", 305, 5)
-$log = GUICtrlCreateEdit("APK to Java v0.6 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
+$log = GUICtrlCreateEdit("APK to Java v0.7 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
 
 GUICtrlCreateGroup("Step 1: Selecting the file", 5, 5, 290, 140)
 GUICtrlCreateLabel("Please choose the apk/jar file that you want to " & @CRLF & "decompile to java sources: ", 15, 25)
@@ -137,8 +138,8 @@ $decompile_source_smali = GUICtrlCreateCheckbox("Sources (generate smali code)",
 $decompile_resource = GUICtrlCreateCheckbox("Resources (the images/layouts/etc)", 15, 320)
 
 GUICtrlCreateLabel("Additional options:", 15, 350)
-$decompile_eclipse = GUICtrlCreateCheckbox("Convert the output to an Eclipse project", 15, 370)
-GUICtrlSetState($decompile_eclipse, $GUI_DISABLE)
+$decompile_eclipse = GUICtrlCreateCheckbox("Convert the output to an Eclipse project (BETA)", 15, 370)
+;~ GUICtrlSetState($decompile_eclipse, $GUI_DISABLE)
 
 $start_process = GUICtrlCreateButton("Start Process!", 5, 400, 105, 25)
 $about_button = GUICtrlCreateButton("Help / About", 115, 400, 105, 25)
@@ -148,9 +149,18 @@ $copyright = GUICtrlCreateLabel("©2012 broodplank.net", 5, 435)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 
+Func _StringSearchInFile($file, $qry)
+	_RunDos("find /n /i """ & $qry & """ " & $file & " >> " & @TempDir & "\results.txt")
+	If Not @error Then
+		FileSetAttrib(@TempDir & "\results.txt", "-N+H+T", 0)
+		$CHARS = FileGetSize(@TempDir & "\results.txt")
+		Return FileRead(@TempDir & "\results.txt", $CHARS) & @CRLF
+	EndIf
+EndFunc   ;==>_StringSearchInFile
+
 
 Func _ExtractAPK($apkfile)
-	GUICtrlSetData($log, "APK to Java v0.6 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
+	GUICtrlSetData($log, "APK to Java v0.7 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
 	FileDelete(@ScriptDir & "\tools\classes.dex")
 	_AddLog("- Extracting APK...")
 	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
@@ -224,9 +234,31 @@ Func _DecompileResource()
 EndFunc   ;==>_DecompileResource
 
 Func _MakeEclipse()
+	_AddLog(@CRLF & "- Making Eclipse Project...")
+	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
+	_AddLog("- Copying example project..")
+	DirCopy(@ScriptDir & "\tools\exampleproject", $getpath_outputdir & "\eclipseproject", 1)
+	_AddLog("- Importing AndroidManifest.xml...")
+	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
+	_AddLog("- Importing Resources...")
+	DirCopy($getpath_outputdir & "\resource\res", $getpath_outputdir & "\eclipseproject\res", 1)
+	_AddLog("- Setting Project Name..")
 
-	TrayTip("APK to Java", "Making Eclipse Project Done!", 2)
-	Sleep(1000)
+	;Read package name from Manifest
+	Local $nOffset = 1
+	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
+
+	_AddLog("- Setting Target SDK...")
+	;Read targetsdk value from Manifest
+	Local $nOffset_sdk = 1
+	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0])
+
+
+	_AddLog("- Importing Java Sources...")
+	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
+	_AddLog("- Maing Eclipse Project Done!")
 EndFunc   ;==>_MakeEclipse
 
 Func _AddLog($string)
@@ -302,7 +334,7 @@ While 1
 
 
 		Case $msg = $about_button
-			MsgBox(0, "APK to Java", "APK to Java" & @CRLF & "Version: 0.6 BETA" & @CRLF & "Coded by broodplank" & @CRLF & "www.broodplank.net" & @CRLF & @CRLF & "Help:" & @CRLF & "..." & @CRLF & "..." & @CRLF & "...")
+			MsgBox(0, "APK to Java", "APK to Java" & @CRLF & "Version: 0.7 BETA" & @CRLF & "Coded by broodplank" & @CRLF & "www.broodplank.net" & @CRLF & @CRLF & "Help:" & @CRLF & "..." & @CRLF & "..." & @CRLF & "...")
 
 
 
