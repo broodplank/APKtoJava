@@ -4,7 +4,7 @@
 #AutoIt3Wrapper_Outfile_x64=APKtoJava_x64.exe
 #AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_UseUpx=n
-#AutoIt3Wrapper_Res_Description=©2012 broodplank.net
+#AutoIt3Wrapper_Res_Description=ï¿½2012 broodplank.net
 #AutoIt3Wrapper_Res_Fileversion=0.0.0.7
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
@@ -145,7 +145,7 @@ $start_process = GUICtrlCreateButton("Start Process!", 5, 400, 105, 25)
 $about_button = GUICtrlCreateButton("Help / About", 115, 400, 105, 25)
 $exit_button = GUICtrlCreateButton("Exit", 225, 400, 70, 25)
 
-$copyright = GUICtrlCreateLabel("©2012 broodplank.net", 5, 435)
+$copyright = GUICtrlCreateLabel("ï¿½2012 broodplank.net", 5, 435)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 
@@ -252,7 +252,7 @@ Func _MakeEclipse()
 	_AddLog("- Setting Target SDK...")
 	;Read targetsdk value from Manifest
 	Local $nOffset_sdk = 1
-	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
+	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset_sdk)
 	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0])
 
 
