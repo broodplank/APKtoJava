@@ -7,6 +7,8 @@
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
+
+;Includes
 #include <Process.au3>
 #include <File.au3>
 #include <WindowsConstants.au3>
@@ -16,7 +18,7 @@
 #include <EditConstants.au3>
 
 ;Include splash image in exe
-FileInstall("E:\apktojava\splash.jpg", @TempDir & "\splash.jpg")
+FileInstall("E:\apktojava\splash.jpg", @TempDir & "\splash.jpg", 1)
 
 ;Show splash
 $splash = GUICreate("Loading...", 400, 100, -1, -1, $WS_POPUPWINDOW)
@@ -29,9 +31,10 @@ For $i = 0 To 255 Step 5
 Next
 Sleep(500)
 
-;Perform initialization
+;Make jd-gui.cfg (ini)
 FixConfig()
 
+;Check for files
 If Not FileExists(@ScriptDir & "\tools") Then
 	MsgBox(16, "APK to Java", "Missing tools folder, please reinstall the application and try again!")
 	Exit
@@ -81,12 +84,10 @@ If Not FileExists(@ScriptDir & "\tools\setclasspath.bat") Then
 	Exit
 EndIf
 
-
-
-
 Sleep(500)
 GUIDelete($splash)
 
+;Write INI
 Func FixConfig()
 	$localdir = String(@ScriptDir & "\tools\")
 	If FileExists(@ScriptDir & "\tools\jd-gui.cfg") Then FileDelete(@ScriptDir & "\tools\jd-gui.cfg")
@@ -97,11 +98,11 @@ Func FixConfig()
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
-
+;Match window titles by any substring matched
 Opt("WinTitleMatchMode", 2)
 
-Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali
 
+Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali
 
 GUICreate("APK to Java v0.6 BETA (by broodplank)", 550, 450)
 
@@ -170,7 +171,6 @@ Func _DecompileSmali()
 	_AddLog("- Decompiling to Smali code...")
 	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
 	_AddLog("- Decompiling to Smali Done!")
-	;	if FileExists($getpath_outputdir&"\smalicode") Then DirRemove($getpath_outputdir&"\smalicode", 1)
 	_AddLog("- Copying to output dir...")
 	DirCopy(@ScriptDir & "\tools\smalicode", $getpath_outputdir & "\smalicode", 1)
 	Sleep(250)
@@ -180,31 +180,12 @@ EndFunc   ;==>_DecompileSmali
 Func _DecompileJava()
 	_AddLog("- Converting to Java Code...")
 	Sleep(500)
-	;if FileExists(@ScriptDir&"\tools\classes-dex2jar.jar") then FileDelete(@ScriptDir&"\tools\classes-dex2jar.jar")
 	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
 	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
 	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", "", @SW_HIDE)
 	Sleep(250)
 	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
-;~ 	if FileExists(@ScriptDir&"\tools\classes-dex2jar.jar") Then
 	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
-;~ 		sleep(250)
-;~ 		Local $guititle = WinGetTitle("Java Decompiler", "")
-;~ 		MsgBox(0, "Full title read was:", $guititle)
-
-
-
-;~ 		WinWait($guititle)
-
-;~ ControlFocus($guititle, "", "wxWindowClassNR")
-
-
-;~ 		sleep(250)
-;~ 		;WinSetOnTop($guititle, "", 1)
-;~ 		ControlSend($guititle, "", "", "^!a")
-
-
-	;WinSetOnTop("Save", "", 1)
 	WinWaitActive("Save")
 	Sleep(100)
 	ControlSend("Save", "", "", "classes-dex2jar.src.zip")
@@ -226,11 +207,6 @@ Func _DecompileJava()
 	_AddLog("- Copying Java Code to output dir....")
 	DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
 	_AddLog("- Copying Java Code Done!")
-;~ 	Else
-;~ 		MsgBox(16, "APK to Java", "An error has occured, the classes.dex file could not be converted to a jar file...")
-;~ 	EndIf
-
-
 EndFunc   ;==>_DecompileJava
 
 
@@ -240,7 +216,6 @@ Func _DecompileResource()
 	ConsoleWrite(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34))
 	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
 	_AddLog("- Decompiling Resources Done!")
-	;	if FileExists($getpath_outputdir&"\resource") Then DirRemove($getpath_outputdir&"\resource")
 	_AddLog("- Copying to output dir...")
 	DirCopy(@ScriptDir & "\tools\resource", $getpath_outputdir & "\resource", 1)
 	Sleep(250)
