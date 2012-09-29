@@ -1,6 +1,7 @@
 #region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_Icon=apktojavaicon_trans.ico
 #AutoIt3Wrapper_Outfile=APKtoJava.exe
-#AutoIt3Wrapper_Compression=0
+#AutoIt3Wrapper_Compression=4
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=©2012 broodplank.net
 #AutoIt3Wrapper_Res_Fileversion=0.0.0.6
