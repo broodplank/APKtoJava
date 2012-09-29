@@ -3,7 +3,7 @@
 #AutoIt3Wrapper_Compression=0
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=©2012 broodplank.net
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.5
+#AutoIt3Wrapper_Res_Fileversion=0.0.0.6
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -15,7 +15,77 @@
 #include <WinAPI.au3>
 #include <EditConstants.au3>
 
-#OnAutoItStartRegister "FixConfig"
+;Include splash image in exe
+FileInstall("E:\apktojava\splash.jpg", @TempDir & "\splash.jpg")
+
+;Show splash
+$splash = GUICreate("Loading...", 400, 100, -1, -1, $WS_POPUPWINDOW)
+GUICtrlCreatePic(@TempDir & "\splash.jpg", 0, 0, 400, 100)
+WinSetTrans($splash, "", 0)
+GUISetState(@SW_SHOW, $splash)
+For $i = 0 To 255 Step 5
+	WinSetTrans($splash, "", $i)
+	Sleep(1)
+Next
+Sleep(500)
+
+;Perform initialization
+FixConfig()
+
+If Not FileExists(@ScriptDir & "\tools") Then
+	MsgBox(16, "APK to Java", "Missing tools folder, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\7za.exe") Then
+	MsgBox(16, "APK to Java", "Missing 7za.exe, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\apktool.jar") Then
+	MsgBox(16, "APK to Java", "Missing apktool.jar, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\baksmali-1.4.0.jar") Then
+	MsgBox(16, "APK to Java", "Missing baksmali-1.4.0.jar, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\jd-gui.exe") Then
+	MsgBox(16, "APK to Java", "Missing jd-gui.exe, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\lib") Then
+	MsgBox(16, "APK to Java", "Missing tools\lib folder, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\deosmali.bat") Then
+	MsgBox(16, "APK to Java", "Missing deosmali.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\dex2jar.bat") Then
+	MsgBox(16, "APK to Java", "Missing dex2jar.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\extractapk.bat") Then
+	MsgBox(16, "APK to Java", "Missing extractapk.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\extractjava.bat") Then
+	MsgBox(16, "APK to Java", "Missing extractjava.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\extractres.bat") Then
+	MsgBox(16, "APK to Java", "Missing extractres.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists(@ScriptDir & "\tools\setclasspath.bat") Then
+	MsgBox(16, "APK to Java", "Missing setclasspath.bat, please reinstall the application and try again!")
+	Exit
+EndIf
+
+
+
+
+Sleep(500)
+GUIDelete($splash)
 
 Func FixConfig()
 	$localdir = String(@ScriptDir & "\tools\")
@@ -33,12 +103,12 @@ Opt("WinTitleMatchMode", 2)
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali
 
 
-GUICreate("APK to Java v0.5 BETA (by broodplank)", 550, 450)
+GUICreate("APK to Java v0.6 BETA (by broodplank)", 550, 450)
 
 GUISetFont(8, 8, 0, "Verdana")
 
 GUICtrlCreateLabel("Log:", 305, 5)
-$log = GUICtrlCreateEdit("APK to Java v0.5 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
+$log = GUICtrlCreateEdit("APK to Java v0.6 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
 
 GUICtrlCreateGroup("Step 1: Selecting the file", 5, 5, 290, 140)
 GUICtrlCreateLabel("Please choose the apk/jar file that you want to " & @CRLF & "decompile to java sources: ", 15, 25)
@@ -78,7 +148,7 @@ GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 
 Func _ExtractAPK($apkfile)
-	GUICtrlSetData($log, "APK to Java v0.5 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
+	GUICtrlSetData($log, "APK to Java v0.6 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
 	FileDelete(@ScriptDir & "\tools\classes.dex")
 	_AddLog("- Extracting APK...")
 	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
@@ -164,20 +234,6 @@ Func _DecompileJava()
 EndFunc   ;==>_DecompileJava
 
 
-;~ Func _CleanUp()
-;~ 	_AddLog("- Cleaning Up...")
-;~ 	DirRemove(@ScriptDir&"\tools\smalicode")
-;~ 	DirRemove(@ScriptDir&"\tools\javacode")
-;~ 	DirRemove(@ScriptDir&"\tools\resources")
-;~ 	FileDelete(@ScriptDir&"\tools\"&_GetExtProperty($getpath_apkjar, 0)&".zip")
-;~ 	FileDelete(@ScriptDir&"\tools\classes-dex2jar.jar")
-;~ 	FileDelete(@ScriptDir&"\tools\classes-dex2jar.src.zip")
-;~ 	FileDelete(@ScriptDir&"\tools\classes.dex")
-;~ 	_AddLog("- Cleaning Done!"&@CRLF)
-;~ 	_AddLog("The decompilation process is completed!")
-
-;~ EndFunc
-
 Func _DecompileResource()
 	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
 	_AddLog("- Decompiling Resources...")
@@ -218,26 +274,21 @@ While 1
 			Exit
 
 		Case $msg = $filebrowse
-			;			if GUICtrlGetState($filebrowsedex) = 144 Then GUICtrlSetState($filebrowsedex, $GUI_ENABLE)
-
 			$getpath_apkjar = FileOpenDialog("APK to Java, please select an apk/jar file", "", "APK Files (*.apk)|JAR Files (*.jar)", 1, "")
 			If $getpath_apkjar = "" Then
 				;
 			Else
 				GUICtrlSetData($file, _GetExtProperty($getpath_apkjar, 0))
 				If GUICtrlRead($filedex) <> "" Then GUICtrlSetData($filedex, "")
-				;GUICtrlSetState($filebrowsedex, $GUI_DISABLE)
 			EndIf
 
 		Case $msg = $filebrowsedex
-			;	if GUICtrlGetState($filebrowse) = 144 Then GUICtrlSetState($filebrowse, $GUI_ENABLE)
 			$getpath_classes = FileOpenDialog("APK to Java, please select a classes.dex file", "", "DEX Files (*.dex)", 1, "classes.dex")
 			If $getpath_classes = "" Then
 				;
 			Else
 				GUICtrlSetData($filedex, _GetExtProperty($getpath_classes, 0))
 				If GUICtrlRead($file) <> "" Then GUICtrlSetData($file, "")
-				;	GUICtrlSetState($filebrowse, $GUI_DISABLE)
 			EndIf
 
 		Case $msg = $destdirbrowse
@@ -272,6 +323,10 @@ While 1
 				_AddLog("The decompilation process is completed!")
 
 			EndIf
+
+
+		Case $msg = $about_button
+			MsgBox(0, "APK to Java", "APK to Java" & @CRLF & "Version: 0.6 BETA" & @CRLF & "Coded by broodplank" & @CRLF & "www.broodplank.net" & @CRLF & @CRLF & "Help:" & @CRLF & "..." & @CRLF & "..." & @CRLF & "...")
 
 
 

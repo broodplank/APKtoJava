@@ -1,5 +1,4 @@
 @echo off
-cd /d %~dp0
 REM
 REM dex2jar - Tools to work with android .dex and java .class files
 REM Copyright (c) 2009-2012 Panxiaobo
