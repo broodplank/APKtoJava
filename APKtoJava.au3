@@ -17,15 +17,14 @@
 
 #OnAutoItStartRegister "FixConfig"
 
-Sleep(1000)
-
 Func FixConfig()
+	$localdir = String(@ScriptDir & "\tools\")
 	If FileExists(@ScriptDir & "\tools\jd-gui.cfg") Then FileDelete(@ScriptDir & "\tools\jd-gui.cfg")
-;~ 	IniWriteSection("
+	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "LoadPath", StringReplace($localdir, "\", "\\", 0))
+	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "SavePath", StringReplace($localdir, "\", "\\", 0))
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "Manifest", "Version", "2")
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "Update", "CurrentVersion", "0.3.3")
-	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "LoadPath", @ScriptDir & "\tools\")
-	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "SavePath", @ScriptDir & "\tools\")
+	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
 
@@ -118,7 +117,7 @@ Func _DecompileJava()
 	Sleep(250)
 	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
 ;~ 	if FileExists(@ScriptDir&"\tools\classes-dex2jar.jar") Then
-	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34))
+	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
 ;~ 		sleep(250)
 ;~ 		Local $guititle = WinGetTitle("Java Decompiler", "")
 ;~ 		MsgBox(0, "Full title read was:", $guititle)
@@ -279,103 +278,3 @@ While 1
 	EndSelect
 
 WEnd
-
-
-
-;~ $openfile = FileOpenDialog("Charged Notifcation Remover - Please choose a Samsung based SystemUI.apk", @WorkingDir, "APK Files (*.apk)", 1, "SystemUI.apk")
-;~ If @error Then
-;~ 	MsgBox(16, "Charged Notifcation Remover", "Aborted..")
-;~ 	Exit
-;~ Else
-;~ 	If FileExists(@ScriptDir & "\classes.dex") Then FileDelete(@ScriptDir & "\classes.dex")
-;~ 	If FileExists(@ScriptDir & "\out.dex") Then FileDelete(@ScriptDir & "\out.dex")
-;~ 	If FileExists(@ScriptDir & "\SystemUI.apk") Then FileDelete(@ScriptDir & "\SystemUI.apk")
-;~ 	If FileExists(@ScriptDir & "\SystemUI.zip") Then FileDelete(@ScriptDir & "\SystemUI.zip")
-;~ 	If FileExists(@ScriptDir & "\finished_apks\SystemUI.apk") Then FileDelete(@ScriptDir & "\finished_apks\SystemUI.apk")
-;~ 	If FileExists(@ScriptDir & "\finished_apks\SystemUI.zip") Then FileDelete(@ScriptDir & "\finished_apks\SystemUI.zip")
-;~ 	FileCopy($openfile, @ScriptDir & "\SystemUI.apk")
-;~ EndIf
-
-;~ DirRemove(@ScriptDir & "\dexout", 1)
-;~ If FileExists(@ScriptDir & "\finished_apks\SystemUI.apk.backup") Then FileDelete(@ScriptDir & "\finished_apks\SystemUI.apk.backup")
-;~ FileCopy(@ScriptDir & "\SystemUI.apk", @ScriptDir & "\finished_apks\SystemUI.apk.backup")
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Making backup...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ Sleep(100)
-
-;~ FileDelete(@TempDir & "\results.txt")
-
-;~ Func _StringSearchInFile($file, $qry)
-;~ 	_RunDos("find /n /i """ & $qry & """ " & $file & " >> " & @TempDir & "\results.txt")
-;~ 	If Not @error Then
-;~ 		FileSetAttrib(@TempDir & "\results.txt", "-N+H+T", 0)
-;~ 		$CHARS = FileGetSize(@TempDir & "\results.txt")
-;~ 		Return FileRead(@TempDir & "\results.txt", $CHARS) & @CRLF
-;~ 	EndIf
-;~ EndFunc   ;==>_StringSearchInFile
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Extracting...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ Sleep(100)
-;~ RunWait(@ScriptDir & "\extract.bat", "", @SW_HIDE)
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Deodexing...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ RunWait(@ScriptDir & "\deodex.bat", "", @SW_HIDE)
-
-;~ FileDelete(@TempDir & "\results.txt")
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Determine lines...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-
-;~ $search1 = _StringSearchInFile(@ScriptDir & "\dexout\com\android\systemui\statusbar\policy\StatusBarPolicy.smali", "Landroid/app/NotificationManager;->notify(ILandroid/app/Notification;)V")
-;~ $readfirst = FileReadLine(@TempDir & "\results.txt", 3)
-;~ $readchars1 = StringLeft($readfirst, 5)
-;~ $startline = StringRight($readchars1, 4)
-
-;~ ConsoleWrite($startline & @CRLF)
-;~ FileDelete(@TempDir & "\results.txt")
-
-;~ $search2 = _StringSearchInFile(@ScriptDir & "\dexout\com\android\systemui\statusbar\policy\StatusBarPolicy.smali", "Lcom/android/systemui/statusbar/policy/StatusBarPolicy;->turnOnScreenWithForce()V")
-;~ $readsecond = FileReadLine(@TempDir & "\results.txt", 3)
-;~ $readchars2 = StringLeft($readsecond, 5)
-;~ $endline = StringRight($readchars2, 4)
-
-;~ $linecount = $endline - $startline
-
-
-;~ FileDelete(@TempDir&"\results.txt")
-
-;~ $linecount = $endline - $startline
-;~ ConsoleWrite($linecount)
-
-;~ If $linecount > 12 Or $linecount < 8 Then
-;~ 	MsgBox(16, "Error", "Charged Notification lines are not found" & @CRLF & @CRLF & "Possible Reasons:" & @CRLF & "- No Samsung SystemUI.apk" & @CRLF & "- Already removed the charged notification")
-;~ 	Exit
-;~ Else
-;~ 	SplashTextOn("Charged Notifcation Remover", "Status: Deleting Line: " & $startline & "...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ 	_FileWriteToLine(@ScriptDir & "\dexout\com\android\systemui\statusbar\policy\StatusBarPolicy.smali", $startline, " ", 1)
-;~ 	Sleep(500)
-;~ 	SplashTextOn("Charged Notifcation Remover", "Status: Deleting Line: " & $endline - 3 & "...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ 	_FileWriteToLine(@ScriptDir & "\dexout\com\android\systemui\statusbar\policy\StatusBarPolicy.smali", $endline - 3, " ", 1)
-;~ 	Sleep(500)
-;~ 	SplashTextOn("Charged Notifcation Remover", "Status: Deleting Line: " & $endline & "...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ 	_FileWriteToLine(@ScriptDir & "\dexout\com\android\systemui\statusbar\policy\StatusBarPolicy.smali", $endline, " ", 1)
-;~ 	Sleep(500)
-;~ EndIf
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Compiling classes.dex...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ RunWait(@ScriptDir & "\compile.bat", "", @SW_HIDE)
-;~ Sleep(100)
-;~ DirRemove(@ScriptDir & "\dexout", 1)
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Updating SystemUI.apk...", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ RunWait(@ScriptDir & "\addfiles.bat", "", @SW_HIDE)
-;~ Sleep(100)
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Moving..", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ Sleep(100)
-
-;~ SplashTextOn("Charged Notifcation Remover", "Status: Done!", 250, 40, -1, -1, 4, "Verdana", 10, 400)
-;~ Sleep(500)
-;~ SplashOff()
-;~ ShellExecute(@ScriptDir & "\finished_apks", "", "", "open", @SW_SHOW)
-;~ MsgBox(0, "Removed Charged Notification", "Thanks for using this tool, coded by: broodplank1337 @ XDA")
-
-;~ Exit
-
