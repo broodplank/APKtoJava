@@ -1,5 +1,5 @@
 -- APK To Java BETA
--- v0.0.0.5
+-- v0.0.0.8
 -- by broodplank
 
 -- www.broodplank.net
