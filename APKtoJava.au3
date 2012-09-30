@@ -10,6 +10,8 @@
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
+#NoTrayIcon
+
 ;Includes
 #include <Process.au3>
 #include <File.au3>
