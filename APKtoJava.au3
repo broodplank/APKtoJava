@@ -10,7 +10,12 @@
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
+;No tray icon
 #NoTrayIcon
+
+;Match window titles by any substring matched
+Opt("WinTitleMatchMode", 2)
+
 
 ;Includes
 #include <Process.au3>
@@ -33,7 +38,6 @@ For $i = 0 To 255 Step 6
 	WinSetTrans($splash, "", $i)
 	Sleep(1)
 Next
-Sleep(500)
 
 ;Make jd-gui.cfg (ini)
 FixConfig()
@@ -93,6 +97,7 @@ GUIDelete($splash)
 
 ;Write INI
 Func FixConfig()
+	Sleep(500)
 	$localdir = String(@ScriptDir & "\tools\")
 	If FileExists(@ScriptDir & "\tools\jd-gui.cfg") Then FileDelete(@ScriptDir & "\tools\jd-gui.cfg")
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "LoadPath", StringReplace($localdir, "\", "\\", 0))
@@ -102,18 +107,15 @@ Func FixConfig()
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
-;Match window titles by any substring matched
-Opt("WinTitleMatchMode", 2)
-
-
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali, $failparam
+
 
 GUICreate("APK to Java v0.8 BETA (by broodplank)", 550, 450)
 
 GUISetFont(8, 8, 0, "Verdana")
 
 GUICtrlCreateLabel("Log:", 305, 5)
-$log = GUICtrlCreateEdit("APK to Java v0.8 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
+$log = GUICtrlCreateEdit("APK to Java v0.8 BETA Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_WANTRETURN, $ES_READONLY));, $ES_READONLY))
 
 GUICtrlCreateGroup("Step 1: Selecting the file", 5, 5, 290, 140)
 GUICtrlCreateLabel("Please choose the apk/jar file that you want to " & @CRLF & "decompile to java sources: ", 15, 25)
@@ -191,7 +193,6 @@ Func _DecompileSmali()
 EndFunc   ;==>_DecompileSmali
 
 Func _DecompileJava()
-	_AddLog("- Converting to Java Code...")
 	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
 	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
 	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", "", @SW_HIDE)
@@ -250,7 +251,9 @@ Func _MakeEclipse()
 	_AddLog("- Setting Target SDK...")
 	;Read targetsdk value from Manifest
 	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
-	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0])
+	ConsoleWrite($tarsdkarray[0])
+	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0], 1)
+	ConsoleWrite($write)
 
 	_AddLog("- Importing Java Sources...")
 	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
