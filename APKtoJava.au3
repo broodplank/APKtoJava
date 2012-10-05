@@ -105,8 +105,10 @@ Func FixConfig()
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
+
 ;Declare Globals
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali, $failparam, $javaeror, $resourcerror
+
 
 ;StringSearchInFile func
 Func _StringSearchInFile($file, $qry)
@@ -155,6 +157,7 @@ Func _DecompileSmali()
 	_AddLog("- Copying to output dir Done!")
 EndFunc   ;==>_DecompileSmali
 
+
 ;Decompile Java
 Func _DecompileJava()
 
@@ -192,6 +195,7 @@ Func _DecompileJava()
 ;~ 	EndIf
 EndFunc   ;==>_DecompileJava
 
+
 ;Decompile Resources
 Func _DecompileResource()
 
@@ -206,6 +210,7 @@ Func _DecompileResource()
 	_AddLog("- Copying to output dir Done!")
 
 EndFunc   ;==>_DecompileResource
+
 
 ;Make Eclipse Project
 Func _MakeEclipse()
@@ -241,6 +246,9 @@ Func _MakeEclipse()
 
 EndFunc   ;==>_MakeEclipse
 
+
+
+
 ;AddLog function
 Func _AddLog($string)
 	$CurrentLog = GUICtrlRead($log)
@@ -249,8 +257,27 @@ Func _AddLog($string)
 EndFunc   ;==>_AddLog
 
 
+Func Restart()
+	Run(@ScriptDir & "\APKtoJava.exe")
+EndFunc   ;==>Restart
 
-GUICreate("APK to Java RC1 (by broodplank)", 550, 450)
+
+
+$GUI = GUICreate("APK to Java Release Candidate 1  --  by broodplank", 550, 470)
+
+$filemenu = GUICtrlCreateMenu("&File")
+$filemenu_restart = GUICtrlCreateMenuItem("&Restart", $filemenu, 1)
+$filemenu_exit = GUICtrlCreateMenuItem("E&xit", $filemenu, 2)
+
+$optionsmenu = GUICtrlCreateMenu("&Options")
+$optionsmenu_preferences = GUICtrlCreateMenuItem("&Preferences", $optionsmenu, 1)
+
+$helpmenu = GUICtrlCreateMenu("&Help")
+$helpmenu_help = GUICtrlCreateMenuItem("&Open Help File", $helpmenu, 1)
+$helpmenu_about = GUICtrlCreateMenuItem("&About", $helpmenu, 2)
+$helpmenu_donate = GUICtrlCreateMenuItem("&Donate", $helpmenu, 2)
+
+
 
 GUISetFont(8, 8, 0, "Verdana")
 
@@ -282,13 +309,13 @@ $decompile_source_smali = GUICtrlCreateCheckbox("Sources (generate smali code)",
 $decompile_resource = GUICtrlCreateCheckbox("Resources (the images/layouts/etc)", 15, 320)
 
 GUICtrlCreateLabel("Additional options:", 15, 350)
-$decompile_eclipse = GUICtrlCreateCheckbox("Convert the output to an Eclipse project (BETA)", 15, 370)
+$decompile_eclipse = GUICtrlCreateCheckbox("Convert output to an Eclipse project (BETA)", 15, 370)
 
-$start_process = GUICtrlCreateButton("Start Process!", 5, 400, 105, 25)
-$about_button = GUICtrlCreateButton("Help / About", 115, 400, 105, 25)
-$exit_button = GUICtrlCreateButton("Exit", 225, 400, 70, 25)
+$start_process = GUICtrlCreateButton("Start Decompilation Process!", 5, 400, 290, 25)
+;~ $about_button = GUICtrlCreateButton("Help / About", 115, 400, 105, 25)
+;~ $exit_button = GUICtrlCreateButton("Exit", 225, 400, 70, 25)
 
-$copyright = GUICtrlCreateLabel("©2012 broodplank.net", 5, 435)
+$copyright = GUICtrlCreateLabel("©2012 broodplank.net - All Rights Reserved", 5, 433)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 GUISetState()
@@ -299,7 +326,7 @@ While 1
 
 	Select
 
-		Case $msg = $gui_event_close Or $msg = $exit_button
+		Case $msg = $gui_event_close Or $msg = $filemenu_exit
 			Exit
 
 		Case $msg = $filebrowse
@@ -328,10 +355,10 @@ While 1
 				GUICtrlSetData($destination, $getpath_outputdir)
 			EndIf
 
-		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_Checked) = $GUI_Checked
-			GUICtrlSetState($decompile_resource, $GUI_Checked)
+		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_CHECKED) = $GUI_CHECKED
+			GUICtrlSetState($decompile_resource, $GUI_CHECKED)
 			GUICtrlSetState($decompile_resource, $GUI_DISABLE)
-			GUICtrlSetState($decompile_source_java, $GUI_Checked)
+			GUICtrlSetState($decompile_source_java, $GUI_CHECKED)
 			GUICtrlSetState($decompile_source_java, $GUI_DISABLE)
 
 		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_UnChecked) = $GUI_UnChecked
@@ -380,10 +407,149 @@ While 1
 			EndIf
 
 
-		Case $msg = $about_button
+		Case $msg = $helpmenu_help
 			_RunDos("start " & @ScriptDir & "\help.chm")
+
+		Case $msg = $helpmenu_about
+			MsgBox(0, "APK to Java -- About", "About APK to Java" & @CRLF & @CRLF & "APK to Java" & @CRLF & "Version: RC1" & @CRLF & "Author: broodplank(1337)" & @CRLF & "Site: www.broodplank.net")
+
+		Case $msg = $helpmenu_donate
+			_RunDos("start http://forum.xda-developers.com/donatetome.php?u=4354408")
+
+		Case $msg = $optionsmenu_preferences
+			_PreferencesMenu()
+
+		Case $msg = $filemenu_restart
+			If ProcessExists("APKtoJava.exe") Then
+				OnAutoItExitRegister("Restart")
+				Exit
+			EndIf
+
 
 
 	EndSelect
 
 WEnd
+
+
+Func _PreferencesMenu()
+
+	$optionsGUI = GUICreate("APK to Java Preferences", 260, 175, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $GUI)
+	GUISetBkColor(0xefefef, $optionsGUI)
+
+	GUICtrlCreateGroup("Application settings:", 5, 5, 250, 65)
+;~ 	$options_app_check = GUICtrlCreateCheckbox("Enable authentication check at start", 15, 25)
+;~ 	$options_app_check_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", 1)
+;~ 	If $options_app_check_read = "1" Then
+;~ 		GUICtrlSetState($options_app_check, $GUI_CHECKED)
+;~ 	Else
+;~ 		;
+;~ 	EndIf
+
+;~ 	$options_app_update = GUICtrlCreateCheckbox("Automatically check for updates at start", 15, 45)
+;~ 	$options_app_update_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", 0)
+;~ 	If $options_app_update_read = "1" Then
+;~ 		GUICtrlSetState($options_app_update, $GUI_CHECKED)
+;~ 	Else
+;~ 		;
+;~ 	EndIf
+
+	GUICtrlCreateGroup("Batch file behaviour:", 5, 80, 250, 65)
+;~ 	$options_bat_safemode = GUICtrlCreateCheckbox("Enable safemode (always mount /system)", 15, 100)
+;~ 	$options_bat_safemode_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", 0)
+;~ 	If $options_bat_safemode_read = "1" Then
+;~ 		GUICtrlSetState($options_bat_safemode, $GUI_CHECKED)
+;~ 	Else
+;~ 		;
+;~ 	EndIf
+
+;~ 	$options_bat_pause = GUICtrlCreateCheckbox("Pause batch file when it's finished", 15, 120)
+;~ 	$options_bat_pause_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", 1)
+;~ 	If $options_bat_pause_read = "1" Then
+;~ 		GUICtrlSetState($options_bat_pause, $GUI_CHECKED)
+;~ 	Else
+;~ 		;
+;~ 	EndIf
+
+	$options_ok_button = GUICtrlCreateButton("Ok", 5, 150, 80, 20)
+	$options_cancel_button = GUICtrlCreateButton("Cancel", 90, 150, 80, 20)
+	$options_apply_button = GUICtrlCreateButton("Apply", 175, 150, 80, 20)
+
+
+	GUISetState(@SW_SHOW, $optionsGUI)
+	GUISwitch($optionsGUI)
+
+	While 1
+		$msg2 = GUIGetMsg()
+
+		If $msg2 = $gui_event_close Or $msg2 = $options_cancel_button Then
+			GUIDelete($optionsGUI)
+			ExitLoop
+		EndIf
+
+		If $msg2 = $options_ok_button Then
+
+;~ 			If GUICtrlRead($options_app_check) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "1")
+;~ 			ElseIf GUICtrlRead($options_app_check) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_app_update) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "1")
+;~ 			ElseIf GUICtrlRead($options_app_update) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_bat_safemode) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "1")
+;~ 			ElseIf GUICtrlRead($options_bat_safemode) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_bat_pause) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "1")
+;~ 			ElseIf GUICtrlRead($options_bat_pause) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "0")
+;~ 			EndIf
+
+
+			GUIDelete($optionsGUI)
+			ExitLoop
+		EndIf
+
+		If $msg2 = $options_apply_button Then
+
+;~ 			If GUICtrlRead($options_app_check) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "1")
+;~ 			ElseIf GUICtrlRead($options_app_check) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_app_update) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "1")
+;~ 			ElseIf GUICtrlRead($options_app_update) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_bat_safemode) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "1")
+;~ 			ElseIf GUICtrlRead($options_bat_safemode) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "0")
+;~ 			EndIf
+
+;~ 			If GUICtrlRead($options_bat_pause) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "1")
+;~ 			ElseIf GUICtrlRead($options_bat_pause) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "0")
+;~ 			EndIf
+
+;~ 			GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
+
+		EndIf
+
+
+	WEnd
+
+
+EndFunc   ;==>_PreferencesMenu
