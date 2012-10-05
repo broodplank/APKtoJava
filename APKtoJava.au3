@@ -105,7 +105,149 @@ Func FixConfig()
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
+;Declare Globals
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali, $failparam, $javaeror, $resourcerror
+
+;StringSearchInFile func
+Func _StringSearchInFile($file, $qry)
+	_RunDos("find /n /i " & Chr(34) & $qry & Chr(34) & " " & Chr(34) & $file & Chr(34) & " >> " & @TempDir & "\results.txt")
+	If Not @error Then
+		FileSetAttrib(@TempDir & "\results.txt", "-N+H+T", 0)
+		$CHARS = FileGetSize(@TempDir & "\results.txt")
+		Return FileRead(@TempDir & "\results.txt", $CHARS) & @CRLF
+	EndIf
+EndFunc   ;==>_StringSearchInFile
+
+
+;ExtractAPK
+Func _ExtractAPK($apkfile)
+	GUICtrlSetData($log, "APK to Java RC1 Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
+	FileDelete(@ScriptDir & "\tools\classes.dex")
+
+	_AddLog("- Extracting APK...")
+	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
+	RunWait(@ScriptDir & "\tools\extractapk.bat " & _GetExtProperty($getpath_apkjar, 0), "", @SW_HIDE)
+	_AddLog("- Extracting APK Done!")
+
+	If GUICtrlRead($decompile_resource) = 1 Then _DecompileResource()
+
+	If FileExists(@ScriptDir & "\tools\classes.dex") Then
+		If GUICtrlRead($decompile_source_smali) = 1 Then _DecompileSmali()
+		If GUICtrlRead($decompile_source_java) = 1 Then _DecompileJava()
+	Else
+		$failparam = "noclasses"
+		_AddLog(@CRLF & "ERROR: No classes.dex file found! Aborting..." & @CRLF)
+	EndIf
+
+	If GUICtrlRead($decompile_eclipse) = 1 Then _MakeEclipse()
+EndFunc   ;==>_ExtractAPK
+
+
+;Decompile Smali
+Func _DecompileSmali()
+	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
+	_AddLog("- Decompiling to Smali code...")
+	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
+	_AddLog("- Decompiling to Smali Done!")
+
+	_AddLog("- Copying to output dir...")
+	DirCopy(@ScriptDir & "\tools\smalicode", $getpath_outputdir & "\smalicode", 1)
+	_AddLog("- Copying to output dir Done!")
+EndFunc   ;==>_DecompileSmali
+
+;Decompile Java
+Func _DecompileJava()
+
+	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
+
+	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
+
+	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", "", @SW_HIDE)
+	Sleep(250)
+	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
+	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
+
+	WinWaitActive("Save")
+	Sleep(100)
+	ControlSend("Save", "", "", @ScriptDir & "\tools\classes-dex2jar.src.zip")
+	Sleep(200)
+	ControlSend("Save", "", "", "{enter}")
+	Sleep(200)
+
+	WinWaitClose("Save All Sources", "")
+	ProcessClose("jd-gui.exe")
+	Sleep(100)
+	_AddLog("- Generating Java Code Done!")
+
+	_AddLog("- Extracting Java Code....")
+	RunWait(@ScriptDir & "\tools\extractjava.bat", "", @SW_HIDE)
+	_AddLog("- Extracting Java Code Done!")
+
+	Sleep(200)
+
+	_AddLog("- Copying Java Code to output dir....")
+	DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
+	_AddLog("- Copying Java Code Done!")
+
+;~ 	EndIf
+EndFunc   ;==>_DecompileJava
+
+;Decompile Resources
+Func _DecompileResource()
+
+	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
+	_AddLog("- Decompiling Resources...")
+
+	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
+	_AddLog("- Decompiling Resources Done!")
+
+	_AddLog("- Copying to output dir...")
+	DirCopy(@ScriptDir & "\tools\resource", $getpath_outputdir & "\resource", 1)
+	_AddLog("- Copying to output dir Done!")
+
+EndFunc   ;==>_DecompileResource
+
+;Make Eclipse Project
+Func _MakeEclipse()
+	_AddLog(@CRLF & "- Making Eclipse Project...")
+	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
+
+	_AddLog("- Extracting Example Project..")
+	RunWait(@ScriptDir & "\tools\extracteclipse.bat " & $getpath_outputdir, "", @SW_HIDE)
+
+	_AddLog("- Importing AndroidManifest.xml...")
+	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
+
+	_AddLog("- Importing Resources...")
+	DirCopy($getpath_outputdir & "\resource\res", $getpath_outputdir & "\eclipseproject\res", 1)
+
+	_AddLog("- Setting Project Name..")
+	;Read package name from Manifest
+	Local $nOffset = 1
+	Local $namearray
+	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
+
+	_AddLog("- Setting Target SDK...")
+	;Read targetsdk value from Manifest
+	Local $sOffset = 1
+	Local $tarsdkarray
+	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $sOffset)
+	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0], 1)
+
+	_AddLog("- Importing Java Sources...")
+	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
+	_AddLog("- Making Eclipse Project Done!")
+
+EndFunc   ;==>_MakeEclipse
+
+;AddLog function
+Func _AddLog($string)
+	$CurrentLog = GUICtrlRead($log)
+	$NewLog = $CurrentLog & @CRLF & $string
+	GUICtrlSetData($log, $NewLog)
+EndFunc   ;==>_AddLog
+
 
 
 GUICreate("APK to Java RC1 (by broodplank)", 550, 450)
@@ -149,150 +291,6 @@ $exit_button = GUICtrlCreateButton("Exit", 225, 400, 70, 25)
 $copyright = GUICtrlCreateLabel("©2012 broodplank.net", 5, 435)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
-
-Func _StringSearchInFile($file, $qry)
-	_RunDos("find /n /i """ & $qry & """ " & $file & " >> " & @TempDir & "\results.txt")
-	If Not @error Then
-		FileSetAttrib(@TempDir & "\results.txt", "-N+H+T", 0)
-		$CHARS = FileGetSize(@TempDir & "\results.txt")
-		Return FileRead(@TempDir & "\results.txt", $CHARS) & @CRLF
-	EndIf
-EndFunc   ;==>_StringSearchInFile
-
-
-Func _ExtractAPK($apkfile)
-	GUICtrlSetData($log, "APK to Java RC1 Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
-	FileDelete(@ScriptDir & "\tools\classes.dex")
-
-	_AddLog("- Extracting APK...")
-	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
-	RunWait(@ScriptDir & "\tools\extractapk.bat " & _GetExtProperty($getpath_apkjar, 0), "", @SW_HIDE)
-	_AddLog("- Extracting APK Done!")
-
-	If GUICtrlRead($decompile_resource) = 1 Then _DecompileResource()
-
-	If FileExists(@ScriptDir & "\tools\classes.dex") Then
-		If GUICtrlRead($decompile_source_smali) = 1 Then _DecompileSmali()
-		If GUICtrlRead($decompile_source_java) = 1 Then _DecompileJava()
-	Else
-		$failparam = "noclasses"
-		_AddLog(@CRLF & "ERROR: No classes.dex file found! Aborting..." & @CRLF)
-	EndIf
-
-	If GUICtrlRead($decompile_eclipse) = 1 Then _MakeEclipse()
-EndFunc   ;==>_ExtractAPK
-
-Func _DecompileSmali()
-	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
-	_AddLog("- Decompiling to Smali code...")
-	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
-	_AddLog("- Decompiling to Smali Done!")
-
-	_AddLog("- Copying to output dir...")
-	DirCopy(@ScriptDir & "\tools\smalicode", $getpath_outputdir & "\smalicode", 1)
-	_AddLog("- Copying to output dir Done!")
-EndFunc   ;==>_DecompileSmali
-
-Func _DecompileJava()
-
-;~ 	If GUICtrlRead($decompile_source_java) = "4" Then
-;~ 		$failparam = "nojava"
-;~ 	Else
-	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
-
-	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
-
-	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", "", @SW_HIDE)
-	Sleep(250)
-	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
-	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
-
-	WinWaitActive("Save")
-	Sleep(100)
-	ControlSend("Save", "", "", "classes-dex2jar.src.zip")
-	Sleep(200)
-	ControlSend("Save", "", "", "{enter}")
-	Sleep(200)
-	WinWaitClose("Save All Sources", "")
-	ProcessClose("jd-gui.exe")
-	Sleep(100)
-	_AddLog("- Generating Java Code Done!")
-
-	_AddLog("- Extracting Java Code....")
-	RunWait(@ScriptDir & "\tools\extractjava.bat", "", @SW_HIDE)
-	_AddLog("- Extracting Java Code Done!")
-
-	Sleep(200)
-
-	_AddLog("- Copying Java Code to output dir....")
-	DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
-	_AddLog("- Copying Java Code Done!")
-
-;~ 	EndIf
-EndFunc   ;==>_DecompileJava
-
-
-Func _DecompileResource()
-;~ 	If GUICtrlRead($decompile_resource) = "4" Then
-;~ 		$failparam = "nores"
-;~ 	Else
-
-	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
-	_AddLog("- Decompiling Resources...")
-
-	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
-	_AddLog("- Decompiling Resources Done!")
-
-	_AddLog("- Copying to output dir...")
-	DirCopy(@ScriptDir & "\tools\resource", $getpath_outputdir & "\resource", 1)
-	_AddLog("- Copying to output dir Done!")
-
-;~ 	EndIf
-EndFunc   ;==>_DecompileResource
-
-
-Func _MakeEclipse()
-	_AddLog(@CRLF & "- Making Eclipse Project...")
-	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
-
-	_AddLog("- Extracting Example Project..")
-	RunWait(@ScriptDir & "\tools\extracteclipse.bat " & $getpath_outputdir, "", @SW_HIDE)
-
-	_AddLog("- Importing AndroidManifest.xml...")
-	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
-
-	_AddLog("- Importing Resources...")
-	DirCopy($getpath_outputdir & "\resource\res", $getpath_outputdir & "\eclipseproject\res", 1)
-
-	_AddLog("- Setting Project Name..")
-	;Read package name from Manifest
-	Local $nOffset = 1
-	Local $namearray
-	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
-	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
-
-	_AddLog("- Setting Target SDK...")
-	;Read targetsdk value from Manifest
-	Local $sOffset = 1
-	Local $tarsdkarray
-	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $sOffset)
-	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0], 1)
-
-	_AddLog("- Importing Java Sources...")
-	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
-	_AddLog("- Making Eclipse Project Done!")
-
-EndFunc   ;==>_MakeEclipse
-
-Func _AddLog($string)
-	$CurrentLog = GUICtrlRead($log)
-	$NewLog = $CurrentLog & @CRLF & $string
-	GUICtrlSetData($log, $NewLog)
-EndFunc   ;==>_AddLog
-
-
-
-
 GUISetState()
 
 While 1
@@ -330,6 +328,18 @@ While 1
 				GUICtrlSetData($destination, $getpath_outputdir)
 			EndIf
 
+		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_Checked) = $GUI_Checked
+			GUICtrlSetState($decompile_resource, $GUI_Checked)
+			GUICtrlSetState($decompile_resource, $GUI_DISABLE)
+			GUICtrlSetState($decompile_source_java, $GUI_Checked)
+			GUICtrlSetState($decompile_source_java, $GUI_DISABLE)
+
+		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_UnChecked) = $GUI_UnChecked
+			GUICtrlSetState($decompile_resource, $GUI_UnChecked)
+			GUICtrlSetState($decompile_resource, $GUI_ENABLE)
+			GUICtrlSetState($decompile_source_java, $GUI_UnChecked)
+			GUICtrlSetState($decompile_source_java, $GUI_ENABLE)
+
 		Case $msg = $start_process
 
 			If GUICtrlRead($file) = "" Then
@@ -341,11 +351,6 @@ While 1
 				MsgBox(0, "APK to Java", "You haven't selected an output directory!")
 
 			Else
-
-;~ 				If GUICtrlRead($decompile_eclipse) = 1 Then
-;~ 					If GUICtrlRead($decompile_resource) = 4 Then MsgBox(0, "APK to Java", "In order to make an Eclipse project you need to extract the resources of the apk!")
-;~ 					If GUICtrlRead($decompile_source_java) = 4 Then MsgBox(0, "APK to Java", "In order to make an Eclipse project you need to extract the java code of the apk!")
-;~ 				Elseif
 
 				_ExtractAPK(_GetExtProperty($getpath_apkjar, 0))
 
@@ -359,8 +364,6 @@ While 1
 				ElseIf $resourcerror = 1 Then
 					_AddLog(@CRLF & "Making Eclipse project failed because no resources decompilation has been selected!")
 				EndIf
-
-
 
 				;CLEANING
 				_AddLog(@CRLF & "- Cleaning Up...")
