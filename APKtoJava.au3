@@ -24,8 +24,9 @@ Opt("WinTitleMatchMode", 2)
 #include <WinAPI.au3>
 #include <EditConstants.au3>
 
+EnvSet("path", EnvGet("path") & ";" & @ScriptDir)
 ;Include splash image in exe
-FileInstall("E:\apktojava\splash.jpg", @TempDir & "\splash.jpg", 1)
+FileInstall("splash.jpg", @TempDir & "\splash.jpg", 1)
 
 ;Show splash
 $splash = GUICreate("Loading...", 400, 100, -1, -1, $WS_POPUPWINDOW)
@@ -41,51 +42,55 @@ Next
 FixConfig()
 
 ;Check for files
-If Not FileExists(@ScriptDir & "\tools") Then
+If Not FileExists("tools") Then
 	MsgBox(16, "APK to Java", "Missing tools folder, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\7za.exe") Then
+If Not FileExists("tools\7za.exe") Then
 	MsgBox(16, "APK to Java", "Missing 7za.exe, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\apktool.jar") Then
+If Not FileExists("tools\aapt.exe") Then
+	MsgBox(16, "APK to Java", "Missing aapt.exe, please reinstall the application and try again!")
+	Exit
+EndIf
+If Not FileExists("tools\apktool.jar") Then
 	MsgBox(16, "APK to Java", "Missing apktool.jar, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\baksmali-1.4.0.jar") Then
+If Not FileExists("tools\baksmali-1.4.0.jar") Then
 	MsgBox(16, "APK to Java", "Missing baksmali-1.4.0.jar, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\jd-gui.exe") Then
+If Not FileExists("tools\jd-gui.exe") Then
 	MsgBox(16, "APK to Java", "Missing jd-gui.exe, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\lib") Then
+If Not FileExists("tools\lib") Then
 	MsgBox(16, "APK to Java", "Missing tools\lib folder, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\deosmali.bat") Then
+If Not FileExists("tools\deosmali.bat") Then
 	MsgBox(16, "APK to Java", "Missing deosmali.bat, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\dex2jar.bat") Then
+If Not FileExists("tools\dex2jar.bat") Then
 	MsgBox(16, "APK to Java", "Missing dex2jar.bat, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\extractapk.bat") Then
+If Not FileExists("tools\extractapk.bat") Then
 	MsgBox(16, "APK to Java", "Missing extractapk.bat, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\extractjava.bat") Then
+If Not FileExists("tools\extractjava.bat") Then
 	MsgBox(16, "APK to Java", "Missing extractjava.bat, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\extractres.bat") Then
+If Not FileExists("tools\extractres.bat") Then
 	MsgBox(16, "APK to Java", "Missing extractres.bat, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists(@ScriptDir & "\tools\setclasspath.bat") Then
+If Not FileExists("tools\setclasspath.bat") Then
 	MsgBox(16, "APK to Java", "Missing setclasspath.bat, please reinstall the application and try again!")
 	Exit
 EndIf
@@ -228,17 +233,15 @@ Func _MakeEclipse()
 
 	_AddLog("- Setting Project Name..")
 	;Read package name from Manifest
-	Local $nOffset = 1
 	Local $namearray
-	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, $nOffset)
-	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
+	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray & "</name>")
 
 	_AddLog("- Setting Target SDK...")
 	;Read targetsdk value from Manifest
-	Local $sOffset = 1
 	Local $tarsdkarray
-	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, $sOffset)
-	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray[0], 1)
+	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
+	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
 
 	_AddLog("- Importing Java Sources...")
 	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
@@ -263,7 +266,7 @@ EndFunc   ;==>Restart
 
 
 
-$GUI = GUICreate("APK to Java Release Candidate 1  --  by broodplank", 550, 470)
+$GUI = GUICreate("APK to Java Release Candidate 1  -  by broodplank", 550, 470)
 
 $filemenu = GUICtrlCreateMenu("&File")
 $filemenu_restart = GUICtrlCreateMenuItem("&Restart", $filemenu, 1)
