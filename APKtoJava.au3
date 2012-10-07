@@ -70,24 +70,8 @@ If Not FileExists("tools\lib") Then
 	MsgBox(16, "APK to Java", "Missing tools\lib folder, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists("tools\deosmali.bat") Then
-	MsgBox(16, "APK to Java", "Missing deosmali.bat, please reinstall the application and try again!")
-	Exit
-EndIf
 If Not FileExists("tools\dex2jar.bat") Then
 	MsgBox(16, "APK to Java", "Missing dex2jar.bat, please reinstall the application and try again!")
-	Exit
-EndIf
-If Not FileExists("tools\extractapk.bat") Then
-	MsgBox(16, "APK to Java", "Missing extractapk.bat, please reinstall the application and try again!")
-	Exit
-EndIf
-If Not FileExists("tools\extractjava.bat") Then
-	MsgBox(16, "APK to Java", "Missing extractjava.bat, please reinstall the application and try again!")
-	Exit
-EndIf
-If Not FileExists("tools\extractres.bat") Then
-	MsgBox(16, "APK to Java", "Missing extractres.bat, please reinstall the application and try again!")
 	Exit
 EndIf
 If Not FileExists("tools\setclasspath.bat") Then
