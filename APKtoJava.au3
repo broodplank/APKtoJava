@@ -133,7 +133,12 @@ Func _ExtractAPK($apkfile)
 
 	_AddLog("- Extracting APK...")
 	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
-	RunWait(@ScriptDir & "\tools\extractapk.bat " & _GetExtProperty($getpath_apkjar, 0), "", @SW_HIDE)
+	;RunWait(@ScriptDir & "\tools\extractapk.bat " & _GetExtProperty($getpath_apkjar, 0), "", @SW_HIDE)
+
+	;REPLACEMENT FOR extractapk.bat
+	FileCopy(@ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0), @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & ".zip", 1)
+	RunWait(@ComSpec & " /c " & "7za.exe x -y " & _GetExtProperty($getpath_apkjar, 0) & ".zip *.dex", @ScriptDir & "\tools", @SW_HIDE)
+
 	_AddLog("- Extracting APK Done!")
 
 	If GUICtrlRead($decompile_resource) = 1 Then _DecompileResource()
@@ -154,7 +159,10 @@ EndFunc   ;==>_ExtractAPK
 Func _DecompileSmali()
 	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
 	_AddLog("- Decompiling to Smali code...")
-	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
+;~ 	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
+
+	;RECPLACEMENT FOR deosmali.bat
+	RunWait(@ComSpec & " /c " & "java -jar baksmali-1.4.0.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 	_AddLog("- Decompiling to Smali Done!")
 
 	_AddLog("- Copying to output dir...")
@@ -170,7 +178,22 @@ Func _DecompileJava()
 
 	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
 
-	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", "", @SW_HIDE)
+	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", @ScriptDir & "\tools", @SW_HIDE)
+
+;~ 	;REPLACEMENT for dex2jar.bat
+;~ 	Local $searchlibs = FileFindFirstFile(@ScriptDir & "\tools\lib\*.jar")
+
+;~ 	While 1
+;~ 		Local $file = FileFindNextFile($searchlibs)
+;~ 		If @error Then ExitLoop
+
+;~ 		RunWait(@ComSpec & " /c " & "call " & @ScriptDir & "\tools\lib\" & $file, "", @SW_HIDE)
+;~ 	WEnd
+
+;~ 	RunWait(@ComSpec & " /c " & "java -Xms512m -cp " & Chr(34) & "CLASSPATH=" & @ScriptDir & "\tools\lib" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " classes.dex", @ScriptDir & "\tools", @SW_HIDE)
+;~ 	ConsoleWrite(@ComSpec & " /c " & "java -Xms512m -cp " & Chr(34) & "CLASSPATH=" & @ScriptDir & "\tools\lib" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " classes.dex"); @ScriptDir & "\tools", @SW_HIDE)
+
+
 	Sleep(250)
 	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
 	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
@@ -188,7 +211,10 @@ Func _DecompileJava()
 	_AddLog("- Generating Java Code Done!")
 
 	_AddLog("- Extracting Java Code....")
-	RunWait(@ScriptDir & "\tools\extractjava.bat", "", @SW_HIDE)
+;~ 	RunWait(@ScriptDir & "\tools\extractjava.bat", "", @SW_HIDE)
+	;RECPLACEMENT FOR extractjava.bat
+	RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.src.zip -ojavacode", @ScriptDir & "\tools", @SW_HIDE)
+
 	_AddLog("- Extracting Java Code Done!")
 
 	Sleep(200)
@@ -207,7 +233,11 @@ Func _DecompileResource()
 	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
 	_AddLog("- Decompiling Resources...")
 
-	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
+;~ 	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
+	;RECPLACEMENT FOR extractres.bat
+	RunWait(@ComSpec & " /c " & "java -jar " & Chr(34) & @ScriptDir & "\tools\apktool.jar" & Chr(34) & " d -s -f " & _GetExtProperty($getpath_apkjar, 0) & " " & Chr(34) & @ScriptDir & "\tools\resource" & Chr(34), @ScriptDir & "\tools", @SW_HIDE)
+;~ 	ConsoleWrite(@ComSpec & " /c " & "java -jar " & Chr(34) & @ScriptDir & "\tools\apktool.jar" & Chr(34) & " d -s -f " & _GetExtProperty($getpath_apkjar, 0) & " " & Chr(34) & @ScriptDir & "\tools\resource" & Chr(34));, @ScriptDir & "\tools", @SW_HIDE)
+
 	_AddLog("- Decompiling Resources Done!")
 
 	_AddLog("- Copying to output dir...")
@@ -223,7 +253,10 @@ Func _MakeEclipse()
 	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
 
 	_AddLog("- Extracting Example Project..")
-	RunWait(@ScriptDir & "\tools\extracteclipse.bat " & $getpath_outputdir, "", @SW_HIDE)
+	;RunWait(@ScriptDir & "\tools\extracteclipse.bat " & $getpath_outputdir, "", @SW_HIDE)
+	;RECPLACEMENT FOR extracteclipse.bat
+	RunWait(@ComSpec & " /c " & "7za.exe x -y -o" & $getpath_outputdir & "\eclipseproject eclipseproject.zip * ", @ScriptDir & "\tools", @SW_HIDE)
+
 
 	_AddLog("- Importing AndroidManifest.xml...")
 	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
