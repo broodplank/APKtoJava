@@ -23,6 +23,8 @@ Opt("WinTitleMatchMode", 2)
 #include <ExtProp.au3>
 #include <WinAPI.au3>
 #include <EditConstants.au3>
+#include <ComboConstants.au3>
+
 
 EnvSet("path", EnvGet("path") & ";" & @ScriptDir)
 ;Include splash image in exe
@@ -162,21 +164,7 @@ Func _DecompileJava()
 
 	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
 
-	RunWait(@ScriptDir & "\tools\dex2jar.bat classes.dex", @ScriptDir & "\tools", @SW_HIDE)
-
-;~ 	;REPLACEMENT for dex2jar.bat
-;~ 	Local $searchlibs = FileFindFirstFile(@ScriptDir & "\tools\lib\*.jar")
-
-;~ 	While 1
-;~ 		Local $file = FileFindNextFile($searchlibs)
-;~ 		If @error Then ExitLoop
-
-;~ 		RunWait(@ComSpec & " /c " & "call " & @ScriptDir & "\tools\lib\" & $file, "", @SW_HIDE)
-;~ 	WEnd
-
-;~ 	RunWait(@ComSpec & " /c " & "java -Xms512m -cp " & Chr(34) & "CLASSPATH=" & @ScriptDir & "\tools\lib" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " classes.dex", @ScriptDir & "\tools", @SW_HIDE)
-;~ 	ConsoleWrite(@ComSpec & " /c " & "java -Xms512m -cp " & Chr(34) & "CLASSPATH=" & @ScriptDir & "\tools\lib" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " classes.dex"); @ScriptDir & "\tools", @SW_HIDE)
-
+	RunWait(@ScriptDir & "\tools\dex2jar.bat" & " classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 
 	Sleep(250)
 	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
@@ -184,10 +172,13 @@ Func _DecompileJava()
 
 	WinWaitActive("Save")
 	Sleep(100)
-	ControlSend("Save", "", "", @ScriptDir & "\tools\classes-dex2jar.src.zip")
-	Sleep(200)
+	$CLIPSAVE = ClipGet()
+	ClipPut(@ScriptDir & "\tools\classes-dex2jar.src.zip")
+	ControlSend("Save", "", "", "^v")
+	Sleep(150)
+	ClipPut($CLIPSAVE)
 	ControlSend("Save", "", "", "{enter}")
-	Sleep(200)
+	Sleep(150)
 
 	WinWaitClose("Save All Sources", "")
 	ProcessClose("jd-gui.exe")
@@ -454,46 +445,38 @@ WEnd
 
 Func _PreferencesMenu()
 
-	$optionsGUI = GUICreate("APK to Java Preferences", 260, 175, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $GUI)
+	$optionsGUI = GUICreate("APK to Java Preferences", 260, 165, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $GUI)
 	GUISetBkColor(0xefefef, $optionsGUI)
 
-	GUICtrlCreateGroup("Application settings:", 5, 5, 250, 65)
-;~ 	$options_app_check = GUICtrlCreateCheckbox("Enable authentication check at start", 15, 25)
-;~ 	$options_app_check_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", 1)
-;~ 	If $options_app_check_read = "1" Then
-;~ 		GUICtrlSetState($options_app_check, $GUI_CHECKED)
-;~ 	Else
-;~ 		;
-;~ 	EndIf
+	GUICtrlCreateGroup("Java Generation Preferences:", 5, 5, 250, 65)
 
-;~ 	$options_app_update = GUICtrlCreateCheckbox("Automatically check for updates at start", 15, 45)
-;~ 	$options_app_update_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", 0)
-;~ 	If $options_app_update_read = "1" Then
-;~ 		GUICtrlSetState($options_app_update, $GUI_CHECKED)
-;~ 	Else
-;~ 		;
-;~ 	EndIf
+	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+	$options_app_jdgui = GUICtrlCreateCheckbox("Use JD-GUI to make Java Sources", 15, 25)
+	If $options_app_jdgui_read = "1" Then
+		GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
+	Else
+		GUICtrlSetState($options_app_jdgui, $GUI_UnChecked)
+	EndIf
 
-	GUICtrlCreateGroup("Batch file behaviour:", 5, 80, 250, 65)
-;~ 	$options_bat_safemode = GUICtrlCreateCheckbox("Enable safemode (always mount /system)", 15, 100)
-;~ 	$options_bat_safemode_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", 0)
-;~ 	If $options_bat_safemode_read = "1" Then
-;~ 		GUICtrlSetState($options_bat_safemode, $GUI_CHECKED)
-;~ 	Else
-;~ 		;
-;~ 	EndIf
 
-;~ 	$options_bat_pause = GUICtrlCreateCheckbox("Pause batch file when it's finished", 15, 120)
-;~ 	$options_bat_pause_read = IniRead(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", 1)
-;~ 	If $options_bat_pause_read = "1" Then
-;~ 		GUICtrlSetState($options_bat_pause, $GUI_CHECKED)
-;~ 	Else
-;~ 		;
-;~ 	EndIf
+	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "1")
+	$options_app_jad = GUICtrlCreateCheckbox("Use JAD to make Java Sources", 15, 45)
+	If $options_app_jad_read = "1" Then
+		GUICtrlSetState($options_app_jad, $GUI_CHECKED)
+	Else
+		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
+	EndIf
 
-	$options_ok_button = GUICtrlCreateButton("Ok", 5, 150, 80, 20)
-	$options_cancel_button = GUICtrlCreateButton("Cancel", 90, 150, 80, 20)
-	$options_apply_button = GUICtrlCreateButton("Apply", 175, 150, 80, 20)
+	GUICtrlCreateGroup("Heapsize for decompiling:", 5, 75, 250, 50)
+	GUICtrlCreateLabel("Heapsize:", 15, 98)
+	$options_app_heapsize_read = IniRead(@ScriptDir & "\config.ini", "options", "heapsize", "512")
+	$options_app_heapsize = GUICtrlCreateCombo("", 80, 95, 100, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData($options_app_heapsize, "32|64|128|256|512|1024|2048|4096", $options_app_heapsize_read)
+	GUICtrlCreateLabel("MB", 190, 98)
+
+	$options_ok_button = GUICtrlCreateButton("Ok", 5, 140, 80, 20)
+	$options_cancel_button = GUICtrlCreateButton("Cancel", 90, 140, 80, 20)
+	$options_apply_button = GUICtrlCreateButton("Apply", 175, 140, 80, 20)
 
 
 	GUISetState(@SW_SHOW, $optionsGUI)
@@ -508,63 +491,48 @@ Func _PreferencesMenu()
 		EndIf
 
 		If $msg2 = $options_ok_button Then
+			ConsoleWrite(GUICtrlRead($options_app_jdgui) & @CRLF)
+			If GUICtrlRead($options_app_jdgui) = 1 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+			ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+			EndIf
 
-;~ 			If GUICtrlRead($options_app_check) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "1")
-;~ 			ElseIf GUICtrlRead($options_app_check) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "0")
-;~ 			EndIf
+			ConsoleWrite(GUICtrlRead($options_app_jad) & @CRLF)
+			If GUICtrlRead($options_app_jad) = 1 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+			ElseIf GUICtrlRead($options_app_jad) = 4 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+			EndIf
 
-;~ 			If GUICtrlRead($options_app_update) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "1")
-;~ 			ElseIf GUICtrlRead($options_app_update) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "0")
-;~ 			EndIf
-
-;~ 			If GUICtrlRead($options_bat_safemode) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "1")
-;~ 			ElseIf GUICtrlRead($options_bat_safemode) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "0")
-;~ 			EndIf
-
-;~ 			If GUICtrlRead($options_bat_pause) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "1")
-;~ 			ElseIf GUICtrlRead($options_bat_pause) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "0")
-;~ 			EndIf
-
-
+			$heapsize = GUICtrlRead($options_app_heapsize)
+			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
 			GUIDelete($optionsGUI)
 			ExitLoop
 		EndIf
 
 		If $msg2 = $options_apply_button Then
 
-;~ 			If GUICtrlRead($options_app_check) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "1")
-;~ 			ElseIf GUICtrlRead($options_app_check) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "enablecheck", "0")
-;~ 			EndIf
+			If GUICtrlRead($options_app_jdgui_read) = 1 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+			ElseIf GUICtrlRead($options_app_jdgui_read) = 4 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+			EndIf
 
-;~ 			If GUICtrlRead($options_app_update) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "1")
-;~ 			ElseIf GUICtrlRead($options_app_update) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "updatecheck", "0")
-;~ 			EndIf
+			If GUICtrlRead($options_app_jad_read) = 1 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+			ElseIf GUICtrlRead($options_app_jad_read) = 4 Then
+				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+			EndIf
 
-;~ 			If GUICtrlRead($options_bat_safemode) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "1")
-;~ 			ElseIf GUICtrlRead($options_bat_safemode) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "safemode", "0")
-;~ 			EndIf
+			$heapsize = GUICtrlRead($options_app_heapsize)
+			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
 
-;~ 			If GUICtrlRead($options_bat_pause) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "1")
-;~ 			ElseIf GUICtrlRead($options_bat_pause) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\src\settings\settings.broodromconfig", "options", "autopause", "0")
-;~ 			EndIf
-
-;~ 			GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
+			GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
 
 		EndIf
 
