@@ -357,6 +357,7 @@ While 1
 						GUICtrlSetData($destination, "")
 					EndIf
 				EndIf
+				GUICtrlSetData($destination, $getpath_outputdir)
 			EndIf
 
 		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_CHECKED) = $GUI_CHECKED
