@@ -1,5 +1,5 @@
--- APK To Java RC 1
--- v0.0.1.0
+-- APK To Java RC 2
+-- v0.0.2.0
 -- by broodplank
 
 -- www.broodplank.net

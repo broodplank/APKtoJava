@@ -7,7 +7,7 @@
 #AutoIt3Wrapper_Outfile_x64=APKtoJava_x64.exe
 #AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_Res_Description=©2012 broodplank.net
-#AutoIt3Wrapper_Res_Fileversion=0.0.0.1
+#AutoIt3Wrapper_Res_Fileversion=0.0.2.0
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
@@ -24,6 +24,8 @@ Opt("WinTitleMatchMode", 2)
 #include <WinAPI.au3>
 #include <EditConstants.au3>
 #include <ComboConstants.au3>
+#include <Constants.au3>
+
 
 
 EnvSet("path", EnvGet("path") & ";" & @ScriptDir)
@@ -114,7 +116,7 @@ EndFunc   ;==>_StringSearchInFile
 
 ;ExtractAPK
 Func _ExtractAPK($apkfile)
-	GUICtrlSetData($log, "APK to Java RC1 Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
+	GUICtrlSetData($log, "APK to Java RC2 Initialized...." & @CRLF & "------------------------------------------" & @CRLF)
 	FileDelete(@ScriptDir & "\tools\classes.dex")
 
 	_AddLog("- Extracting APK...")
@@ -154,43 +156,82 @@ EndFunc   ;==>_DecompileSmali
 ;Decompile Java
 Func _DecompileJava()
 
+	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "0")
+	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+
 	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
 
 	If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
 
 	RunWait(@ScriptDir & "\tools\dex2jar.bat" & " classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 
-	Sleep(250)
-	MsgBox(0, "APK To Java", "Because controlling JD-GUI trough this application didn't work" & @CRLF & "You have to perform the manual action listed below to continue" & @CRLF & @CRLF & "In JD-GUI, press Control + Alt + S to open the save dialog" & @CRLF & "The script will take it from there.")
-	Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
+	If $options_app_jdgui_read = "1" Then
 
-	WinWaitActive("Save")
-	Sleep(100)
-	$CLIPSAVE = ClipGet()
-	ClipPut(@ScriptDir & "\tools\classes-dex2jar.src.zip")
-	ControlSend("Save", "", "", "^v")
-	Sleep(150)
-	ClipPut($CLIPSAVE)
-	ControlSend("Save", "", "", "{enter}")
-	Sleep(150)
+		Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
 
-	WinWaitClose("Save All Sources", "")
-	ProcessClose("jd-gui.exe")
-	Sleep(100)
-	_AddLog("- Generating Java Code Done!")
+		WinWaitActive("Java Decompiler - classes-dex2jar.jar", "")
+		WinSetTrans("Java Decompiler - classes-dex2jar.jar", "", 0)
 
-	_AddLog("- Extracting Java Code....")
-	RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.src.zip -ojavacode", @ScriptDir & "\tools", @SW_HIDE)
+		ControlSend("Java Decompiler - classes-dex2jar.jar", "", "", "^!s")
+		WinWaitActive("Save")
+		WinSetTrans("Save", "", 0)
 
-	_AddLog("- Extracting Java Code Done!")
+		$CLIPSAVE = ClipGet()
+		ClipPut(@ScriptDir & "\tools\classes-dex2jar.src.zip")
+		ControlSend("Save", "", "", "^v")
 
-	Sleep(200)
+		ClipPut($CLIPSAVE)
+		ControlSend("Save", "", "", "{enter}")
+		Sleep(25)
 
-	_AddLog("- Copying Java Code to output dir....")
-	DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
-	_AddLog("- Copying Java Code Done!")
+		WinSetTrans("Save All Sources", "", 0)
+		WinWaitClose("Save All Sources", "")
 
-;~ 	EndIf
+		ProcessClose("jd-gui.exe")
+
+		_AddLog("- Generating Java Code Done!")
+
+		_AddLog("- Extracting Java Code....")
+		RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.src.zip -ojavacode", @ScriptDir & "\tools", @SW_HIDE)
+
+		_AddLog("- Extracting Java Code Done!")
+
+
+		_AddLog("- Copying Java Code to output dir....")
+		DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
+		_AddLog("- Copying Java Code Done!")
+
+	EndIf
+
+
+	If $options_app_jad_read = "1" Then
+
+		If FileExists(@ScriptDir & "\tools\classcode") Then DirRemove(@ScriptDir & "\tools\classcode")
+
+		FileMove(@ScriptDir & "\tools\classes-dex2jar.jar", @ScriptDir & "\tools\classes-dex2jar.jar.zip", 1)
+		_AddLog("- Extracting class files...")
+		RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.jar.zip -oclasscode", @ScriptDir & "\tools", @SW_HIDE)
+		_AddLog("- Extracting class files Done!")
+
+		_AddLog("- Converting class to java files..." & @CRLF & @CRLF & "This may take several minutes..." & @CRLF)
+		$runjad = Run(@ComSpec & " /c " & "jad -o -r -sjava -dclasscodeout classcode/**/**/**/**/**/*.class", @ScriptDir & "\tools", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
+
+		Local $line
+		While 1
+			$line = StderrRead($runjad)
+			If @error Then ExitLoop
+			ConsoleWrite($line)
+		WEnd
+
+		_AddLog("- Converting class to java done!")
+		_AddLog("- Copying Java Code to output dir....")
+		DirCopy(@ScriptDir & "\tools\classcodeout", $getpath_outputdir & "\javacode", 1)
+		_AddLog("- Copying Java Code Done!")
+
+
+	EndIf
+
+
 EndFunc   ;==>_DecompileJava
 
 
@@ -259,7 +300,7 @@ EndFunc   ;==>Restart
 
 
 
-$GUI = GUICreate("APK to Java Release Candidate 1  -  by broodplank", 550, 470)
+$gui = GUICreate("APK to Java Release Candidate 2  -  by broodplank", 550, 470)
 
 $filemenu = GUICtrlCreateMenu("&File")
 $filemenu_restart = GUICtrlCreateMenuItem("&Restart", $filemenu, 1)
@@ -274,11 +315,10 @@ $helpmenu_about = GUICtrlCreateMenuItem("&About", $helpmenu, 2)
 $helpmenu_donate = GUICtrlCreateMenuItem("&Donate", $helpmenu, 2)
 
 
-
 GUISetFont(8, 8, 0, "Verdana")
 
 GUICtrlCreateLabel("Log:", 305, 5)
-$log = GUICtrlCreateEdit("APK to Java RC1 Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_WANTRETURN, $ES_READONLY));, $ES_READONLY))
+$log = GUICtrlCreateEdit("APK to Java RC2 Initialized...." & @CRLF & "------------------------------------------" & @CRLF, 305, 22, 240, 420, BitOR($WS_VSCROLL, $ES_AUTOVSCROLL, $ES_MULTILINE, $ES_READONLY))
 
 GUICtrlCreateGroup("Step 1: Selecting the file", 5, 5, 290, 140)
 GUICtrlCreateLabel("Please choose the apk/jar file that you want to " & @CRLF & "decompile to java sources: ", 15, 25)
@@ -308,8 +348,6 @@ GUICtrlCreateLabel("Additional options:", 15, 350)
 $decompile_eclipse = GUICtrlCreateCheckbox("Convert output to an Eclipse project (BETA)", 15, 370)
 
 $start_process = GUICtrlCreateButton("Start Decompilation Process!", 5, 400, 290, 25)
-;~ $about_button = GUICtrlCreateButton("Help / About", 115, 400, 105, 25)
-;~ $exit_button = GUICtrlCreateButton("Exit", 225, 400, 70, 25)
 
 $copyright = GUICtrlCreateLabel("©2012 broodplank.net - All Rights Reserved", 5, 433)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
@@ -402,6 +440,8 @@ While 1
 				DirRemove(@ScriptDir & "\tools\smalicode", 1)
 				DirRemove(@ScriptDir & "\tools\javacode", 1)
 				DirRemove(@ScriptDir & "\tools\resource", 1)
+				DirRemove(@ScriptDir & "\tools\classcode", 1)
+				DirRemove(@ScriptDir & "\tools\classcodeout", 1)
 				FileDelete(@ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & ".zip")
 				FileDelete(@ScriptDir & "\tools\classes-dex2jar.jar")
 				FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
@@ -416,7 +456,7 @@ While 1
 			_RunDos("start " & @ScriptDir & "\help.chm")
 
 		Case $msg = $helpmenu_about
-			MsgBox(0, "APK to Java -- About", "About APK to Java" & @CRLF & @CRLF & "APK to Java" & @CRLF & "Version: RC1" & @CRLF & "Author: broodplank(1337)" & @CRLF & "Site: www.broodplank.net")
+			MsgBox(0, "APK to Java -- About", "About APK to Java" & @CRLF & @CRLF & "APK to Java" & @CRLF & "Version: RC2" & @CRLF & "Author: broodplank(1337)" & @CRLF & "Site: www.broodplank.net")
 
 		Case $msg = $helpmenu_donate
 			_RunDos("start http://forum.xda-developers.com/donatetome.php?u=4354408")
@@ -439,30 +479,27 @@ WEnd
 
 Func _PreferencesMenu()
 
-	$optionsGUI = GUICreate("APK to Java Preferences", 260, 165, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $GUI)
+	$optionsGUI = GUICreate("APK to Java Preferences", 260, 165, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $gui)
 	GUISetBkColor(0xefefef, $optionsGUI)
 
 	GUICtrlCreateGroup("Java Generation Preferences:", 5, 5, 250, 65)
 
-;~ 	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-	$options_app_jdgui = GUICtrlCreateCheckbox("Use JD-GUI to make Java Sources", 15, 25)
-	GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
-	GUICtrlSetState($options_app_jdgui, $GUI_DISABLE)
-;~ 	If $options_app_jdgui_read = "1" Then
-;~ 		GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
-;~ 	Else
-;~ 		GUICtrlSetState($options_app_jdgui, $GUI_UnChecked)
-;~ 	EndIf
+	$options_app_jdgui = GUICtrlCreateRadio("Use JD-GUI to make Java Sources", 15, 25)
+	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "")
+	If $options_app_jdgui_read = 1 Then
+		GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
+	Else
+		GUICtrlSetState($options_app_jdgui, $GUI_UnChecked)
+	EndIf
 
 
-;~ 	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "1")
-	$options_app_jad = GUICtrlCreateCheckbox("Use JAD to make Java Sources", 15, 45)
-	GUICtrlSetState($options_app_jad, $GUI_DISABLE)
-;~ 	If $options_app_jad_read = "1" Then
-;~ 		GUICtrlSetState($options_app_jad, $GUI_CHECKED)
-;~ 	Else
-;~ 		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
-;~ 	EndIf
+	$options_app_jad = GUICtrlCreateRadio("Use JAD to make Java Sources", 15, 45)
+	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "")
+	If $options_app_jad_read = 1 Then
+		GUICtrlSetState($options_app_jad, $GUI_CHECKED)
+	Else
+		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
+	EndIf
 
 	GUICtrlCreateGroup("Heapsize for decompiling:", 5, 75, 250, 50)
 	GUICtrlCreateLabel("Heapsize:", 15, 98)
@@ -482,58 +519,62 @@ Func _PreferencesMenu()
 	While 1
 		$msg2 = GUIGetMsg()
 
-		If $msg2 = $gui_event_close Or $msg2 = $options_cancel_button Then
-			GUIDelete($optionsGUI)
-			ExitLoop
-		EndIf
+		Select
 
-		If $msg2 = $options_ok_button Then
-;~ 			ConsoleWrite(GUICtrlRead($options_app_jdgui) & @CRLF)
-;~ 			If GUICtrlRead($options_app_jdgui) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-;~ 			ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-;~ 			EndIf
+			Case $msg2 = $gui_event_close Or $msg2 = $options_cancel_button
+				GUIDelete($optionsGUI)
+				ExitLoop
 
-;~ 			ConsoleWrite(GUICtrlRead($options_app_jad) & @CRLF)
-;~ 			If GUICtrlRead($options_app_jad) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-;~ 			ElseIf GUICtrlRead($options_app_jad) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-;~ 			EndIf
 
-			$heapsize = GUICtrlRead($options_app_heapsize)
-			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
-			_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
-			GUIDelete($optionsGUI)
-			ExitLoop
-		EndIf
+			Case $msg2 = $options_ok_button
+				If GUICtrlRead($options_app_jdgui) = 1 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+				ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+				EndIf
 
-		If $msg2 = $options_apply_button Then
+				If GUICtrlRead($options_app_jad) = 1 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+				ElseIf GUICtrlRead($options_app_jad) = 4 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+				EndIf
 
-;~ 			If GUICtrlRead($options_app_jdgui_read) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-;~ 			ElseIf GUICtrlRead($options_app_jdgui_read) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-;~ 			EndIf
+				$heapsize = GUICtrlRead($options_app_heapsize)
+				IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
+				_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
+				GUIDelete($optionsGUI)
+				ExitLoop
 
-;~ 			If GUICtrlRead($options_app_jad_read) = 1 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-;~ 			ElseIf GUICtrlRead($options_app_jad_read) = 4 Then
-;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-;~ 			EndIf
 
-			$heapsize = GUICtrlRead($options_app_heapsize)
-			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
-			_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
+			Case $msg2 = $options_apply_button
 
-			GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
+				If GUICtrlRead($options_app_jdgui) = 1 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+				ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+				EndIf
 
-		EndIf
+				If GUICtrlRead($options_app_jad) = 1 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+				ElseIf GUICtrlRead($options_app_jad) = 4 Then
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+				EndIf
+
+				$heapsize = GUICtrlRead($options_app_heapsize)
+				IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
+				_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
+
+				GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
+
+		EndSelect
 
 
 	WEnd
