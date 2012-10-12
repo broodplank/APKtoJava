@@ -119,12 +119,8 @@ Func _ExtractAPK($apkfile)
 
 	_AddLog("- Extracting APK...")
 	FileCopy($getpath_apkjar, @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
-	;RunWait(@ScriptDir & "\tools\extractapk.bat " & _GetExtProperty($getpath_apkjar, 0), "", @SW_HIDE)
-
-	;REPLACEMENT FOR extractapk.bat
 	FileCopy(@ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0), @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & ".zip", 1)
 	RunWait(@ComSpec & " /c " & "7za.exe x -y " & _GetExtProperty($getpath_apkjar, 0) & ".zip *.dex", @ScriptDir & "\tools", @SW_HIDE)
-
 	_AddLog("- Extracting APK Done!")
 
 	If GUICtrlRead($decompile_resource) = 1 Then _DecompileResource()
@@ -144,10 +140,8 @@ EndFunc   ;==>_ExtractAPK
 ;Decompile Smali
 Func _DecompileSmali()
 	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
-	_AddLog("- Decompiling to Smali code...")
-;~ 	RunWait(@ScriptDir & "\tools\deosmali.bat", "", @SW_HIDE)
 
-	;RECPLACEMENT FOR deosmali.bat
+	_AddLog("- Decompiling to Smali code...")
 	RunWait(@ComSpec & " /c " & "java -jar baksmali-1.4.0.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 	_AddLog("- Decompiling to Smali Done!")
 
@@ -186,8 +180,6 @@ Func _DecompileJava()
 	_AddLog("- Generating Java Code Done!")
 
 	_AddLog("- Extracting Java Code....")
-;~ 	RunWait(@ScriptDir & "\tools\extractjava.bat", "", @SW_HIDE)
-	;RECPLACEMENT FOR extractjava.bat
 	RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.src.zip -ojavacode", @ScriptDir & "\tools", @SW_HIDE)
 
 	_AddLog("- Extracting Java Code Done!")
@@ -208,11 +200,7 @@ Func _DecompileResource()
 	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
 	_AddLog("- Decompiling Resources...")
 
-;~ 	RunWait(@ScriptDir & "\tools\extractres.bat " & Chr(34) & @ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & Chr(34), "", @SW_HIDE)
-	;RECPLACEMENT FOR extractres.bat
 	RunWait(@ComSpec & " /c " & "java -jar " & Chr(34) & @ScriptDir & "\tools\apktool.jar" & Chr(34) & " d -s -f " & _GetExtProperty($getpath_apkjar, 0) & " " & Chr(34) & @ScriptDir & "\tools\resource" & Chr(34), @ScriptDir & "\tools", @SW_HIDE)
-;~ 	ConsoleWrite(@ComSpec & " /c " & "java -jar " & Chr(34) & @ScriptDir & "\tools\apktool.jar" & Chr(34) & " d -s -f " & _GetExtProperty($getpath_apkjar, 0) & " " & Chr(34) & @ScriptDir & "\tools\resource" & Chr(34));, @ScriptDir & "\tools", @SW_HIDE)
-
 	_AddLog("- Decompiling Resources Done!")
 
 	_AddLog("- Copying to output dir...")
@@ -228,10 +216,7 @@ Func _MakeEclipse()
 	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
 
 	_AddLog("- Extracting Example Project..")
-	;RunWait(@ScriptDir & "\tools\extracteclipse.bat " & $getpath_outputdir, "", @SW_HIDE)
-	;RECPLACEMENT FOR extracteclipse.bat
 	RunWait(@ComSpec & " /c " & "7za.exe x -y -o" & $getpath_outputdir & "\eclipseproject eclipseproject.zip * ", @ScriptDir & "\tools", @SW_HIDE)
-
 
 	_AddLog("- Importing AndroidManifest.xml...")
 	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
@@ -361,9 +346,17 @@ While 1
 		Case $msg = $destdirbrowse
 			$getpath_outputdir = FileSelectFolder("APK to Java, please select the output directory", "", 7, "")
 			If $getpath_outputdir = "" Then
-				;
+				GUICtrlSetData($destination, "")
 			Else
-				GUICtrlSetData($destination, $getpath_outputdir)
+				If StringInStr($getpath_outputdir, Chr(32), 1) Then
+					Dim $msgbox
+					$msgbox = MsgBox(49, "APK To Java Warning", "A space has been found in your destination directory." & @CRLF & "This can lead to an invalid output." & @CRLF & "Do you want to continue?")
+					If $msgbox = 1 Then
+						GUICtrlSetData($destination, $getpath_outputdir)
+					Else
+						GUICtrlSetData($destination, "")
+					EndIf
+				EndIf
 			EndIf
 
 		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_CHECKED) = $GUI_CHECKED
@@ -450,22 +443,25 @@ Func _PreferencesMenu()
 
 	GUICtrlCreateGroup("Java Generation Preferences:", 5, 5, 250, 65)
 
-	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+;~ 	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
 	$options_app_jdgui = GUICtrlCreateCheckbox("Use JD-GUI to make Java Sources", 15, 25)
-	If $options_app_jdgui_read = "1" Then
-		GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
-	Else
-		GUICtrlSetState($options_app_jdgui, $GUI_UnChecked)
-	EndIf
+	GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
+	GUICtrlSetState($options_app_jdgui, $GUI_DISABLE)
+;~ 	If $options_app_jdgui_read = "1" Then
+;~ 		GUICtrlSetState($options_app_jdgui, $GUI_CHECKED)
+;~ 	Else
+;~ 		GUICtrlSetState($options_app_jdgui, $GUI_UnChecked)
+;~ 	EndIf
 
 
-	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "1")
+;~ 	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "1")
 	$options_app_jad = GUICtrlCreateCheckbox("Use JAD to make Java Sources", 15, 45)
-	If $options_app_jad_read = "1" Then
-		GUICtrlSetState($options_app_jad, $GUI_CHECKED)
-	Else
-		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
-	EndIf
+	GUICtrlSetState($options_app_jad, $GUI_DISABLE)
+;~ 	If $options_app_jad_read = "1" Then
+;~ 		GUICtrlSetState($options_app_jad, $GUI_CHECKED)
+;~ 	Else
+;~ 		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
+;~ 	EndIf
 
 	GUICtrlCreateGroup("Heapsize for decompiling:", 5, 75, 250, 50)
 	GUICtrlCreateLabel("Heapsize:", 15, 98)
@@ -491,46 +487,48 @@ Func _PreferencesMenu()
 		EndIf
 
 		If $msg2 = $options_ok_button Then
-			ConsoleWrite(GUICtrlRead($options_app_jdgui) & @CRLF)
-			If GUICtrlRead($options_app_jdgui) = 1 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-			ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-			EndIf
+;~ 			ConsoleWrite(GUICtrlRead($options_app_jdgui) & @CRLF)
+;~ 			If GUICtrlRead($options_app_jdgui) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+;~ 			ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+;~ 			EndIf
 
-			ConsoleWrite(GUICtrlRead($options_app_jad) & @CRLF)
-			If GUICtrlRead($options_app_jad) = 1 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-			ElseIf GUICtrlRead($options_app_jad) = 4 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-			EndIf
+;~ 			ConsoleWrite(GUICtrlRead($options_app_jad) & @CRLF)
+;~ 			If GUICtrlRead($options_app_jad) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+;~ 			ElseIf GUICtrlRead($options_app_jad) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+;~ 			EndIf
 
 			$heapsize = GUICtrlRead($options_app_heapsize)
 			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
+			_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
 			GUIDelete($optionsGUI)
 			ExitLoop
 		EndIf
 
 		If $msg2 = $options_apply_button Then
 
-			If GUICtrlRead($options_app_jdgui_read) = 1 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
-			ElseIf GUICtrlRead($options_app_jdgui_read) = 4 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
-			EndIf
+;~ 			If GUICtrlRead($options_app_jdgui_read) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+;~ 			ElseIf GUICtrlRead($options_app_jdgui_read) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+;~ 			EndIf
 
-			If GUICtrlRead($options_app_jad_read) = 1 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
-			ElseIf GUICtrlRead($options_app_jad_read) = 4 Then
-				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
-			EndIf
+;~ 			If GUICtrlRead($options_app_jad_read) = 1 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+;~ 			ElseIf GUICtrlRead($options_app_jad_read) = 4 Then
+;~ 				IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
+;~ 			EndIf
 
 			$heapsize = GUICtrlRead($options_app_heapsize)
 			IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
+			_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
 
 			GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
 

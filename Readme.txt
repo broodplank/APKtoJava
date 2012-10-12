@@ -1,4 +1,4 @@
--- APK To Java RC (BETA)
+-- APK To Java RC 1
 -- v0.0.1.0
 -- by broodplank
 
