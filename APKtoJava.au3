@@ -348,16 +348,16 @@ While 1
 			If $getpath_outputdir = "" Then
 				GUICtrlSetData($destination, "")
 			Else
+				GUICtrlSetData($destination, $getpath_outputdir)
 				If StringInStr($getpath_outputdir, Chr(32), 1) Then
 					Dim $msgbox
 					$msgbox = MsgBox(49, "APK To Java Warning", "A space has been found in your destination directory." & @CRLF & "This can lead to an invalid output." & @CRLF & "Do you want to continue?")
 					If $msgbox = 1 Then
 						GUICtrlSetData($destination, $getpath_outputdir)
-					Else
+					ElseIf $msgbox = 2 Then
 						GUICtrlSetData($destination, "")
 					EndIf
 				EndIf
-				GUICtrlSetData($destination, $getpath_outputdir)
 			EndIf
 
 		Case $msg = $decompile_eclipse And BitAND(GUICtrlRead($decompile_eclipse), $GUI_CHECKED) = $GUI_CHECKED
