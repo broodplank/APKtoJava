@@ -82,6 +82,10 @@ If Not FileExists("tools\setclasspath.bat") Then
 	MsgBox(16, "APK to Java", "Missing setclasspath.bat, please reinstall the application and try again!")
 	Exit
 EndIf
+If Not FileExists("tools\jad.exe") Then
+	MsgBox(16, "APK to Java", "Missing jad.exe, please reinstall the application and try again!")
+	Exit
+EndIf
 
 Sleep(500)
 GUIDelete($splash)
@@ -167,7 +171,7 @@ Func _DecompileJava()
 
 	If $options_app_jdgui_read = "1" Then
 
-		Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir, @SW_SHOW)
+		Run(@ScriptDir & "\tools\jd-gui.exe " & Chr(34) & @ScriptDir & "\tools\classes-dex2jar.jar" & Chr(34), @ScriptDir & "\tools", @SW_SHOW)
 
 		WinWaitActive("Java Decompiler - classes-dex2jar.jar", "")
 		WinSetTrans("Java Decompiler - classes-dex2jar.jar", "", 0)
@@ -199,6 +203,7 @@ Func _DecompileJava()
 
 		_AddLog("- Copying Java Code to output dir....")
 		DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
+
 		_AddLog("- Copying Java Code Done!")
 
 	EndIf
@@ -206,14 +211,14 @@ Func _DecompileJava()
 
 	If $options_app_jad_read = "1" Then
 
-		If FileExists(@ScriptDir & "\tools\classcode") Then DirRemove(@ScriptDir & "\tools\classcode")
+		If FileExists(@ScriptDir & "\tools\classcode") Then DirRemove(@ScriptDir & "\tools\classcode", 1)
 
 		FileMove(@ScriptDir & "\tools\classes-dex2jar.jar", @ScriptDir & "\tools\classes-dex2jar.jar.zip", 1)
 		_AddLog("- Extracting class files...")
 		RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.jar.zip -oclasscode", @ScriptDir & "\tools", @SW_HIDE)
 		_AddLog("- Extracting class files Done!")
 
-		_AddLog("- Converting class to java files..." & @CRLF & @CRLF & "This may take several minutes..." & @CRLF)
+		_AddLog("- Converting class to java files..." & @CRLF & "(This may take several minutes...)")
 		$runjad = Run(@ComSpec & " /c " & "jad -o -r -sjava -dclasscodeout classcode/**/**/**/**/**/*.class", @ScriptDir & "\tools", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
 
 		Local $line
@@ -237,6 +242,7 @@ EndFunc   ;==>_DecompileJava
 
 ;Decompile Resources
 Func _DecompileResource()
+
 
 	If FileExists(@ScriptDir & "\tools\resource") Then DirRemove(@ScriptDir & "\tools\resource")
 	_AddLog("- Decompiling Resources...")
@@ -266,13 +272,11 @@ Func _MakeEclipse()
 	DirCopy($getpath_outputdir & "\resource\res", $getpath_outputdir & "\eclipseproject\res", 1)
 
 	_AddLog("- Setting Project Name..")
-	;Read package name from Manifest
 	Local $namearray
 	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
 	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray & "</name>")
 
 	_AddLog("- Setting Target SDK...")
-	;Read targetsdk value from Manifest
 	Local $tarsdkarray
 	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
 	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
@@ -345,7 +349,7 @@ $decompile_source_smali = GUICtrlCreateCheckbox("Sources (generate smali code)",
 $decompile_resource = GUICtrlCreateCheckbox("Resources (the images/layouts/etc)", 15, 320)
 
 GUICtrlCreateLabel("Additional options:", 15, 350)
-$decompile_eclipse = GUICtrlCreateCheckbox("Convert output to an Eclipse project (BETA)", 15, 370)
+$decompile_eclipse = GUICtrlCreateCheckbox("Convert output to an Eclipse project", 15, 370)
 
 $start_process = GUICtrlCreateButton("Start Decompilation Process!", 5, 400, 290, 25)
 
@@ -435,7 +439,6 @@ While 1
 					_AddLog(@CRLF & "Making Eclipse project failed because no resources decompilation has been selected!")
 				EndIf
 
-				;CLEANING
 				_AddLog(@CRLF & "- Cleaning Up...")
 				DirRemove(@ScriptDir & "\tools\smalicode", 1)
 				DirRemove(@ScriptDir & "\tools\javacode", 1)
@@ -445,10 +448,11 @@ While 1
 				FileDelete(@ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0) & ".zip")
 				FileDelete(@ScriptDir & "\tools\classes-dex2jar.jar")
 				FileDelete(@ScriptDir & "\tools\classes-dex2jar.src.zip")
+				FileDelete(@ScriptDir & "\tools\classes-dex2jar.jar.zip")
 				FileDelete(@ScriptDir & "\tools\classes.dex")
+				FileDelete(@ScriptDir & "\tools\" & _GetExtProperty($getpath_apkjar, 0))
 				_AddLog("- Cleaning Done!" & @CRLF)
 
-;~ 				EndIf
 			EndIf
 
 
