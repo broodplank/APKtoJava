@@ -1,6 +1,4 @@
-;No tray icon
 #NoTrayIcon
-
 #region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=apktojavaicon_trans.ico
 #AutoIt3Wrapper_Outfile=APKtoJava.exe
@@ -11,6 +9,7 @@
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
+;No tray icon
 
 ;Match window titles by any substring matched
 Opt("WinTitleMatchMode", 2)
@@ -106,9 +105,13 @@ EndFunc   ;==>FixConfig
 ;Declare Globals
 Global $getpath_apkjar, $getpath_classes, $getpath_outputdir, $log, $decompile_eclipse, $decompile_resource, $decompile_source_java, $decompile_source_smali, $failparam, $javaeror, $resourcerror
 
+Local $interval
+$interval = IniRead(@ScriptDir & "\config.ini", "options", "interval", "250")
+
 
 ;StringSearchInFile func
 Func _StringSearchInFile($file, $qry)
+	If FileExists(@TempDir & "\results.txt") Then FileDelete(@TempDir & "\results.txt")
 	_RunDos("find /n /i " & Chr(34) & $qry & Chr(34) & " " & Chr(34) & $file & Chr(34) & " >> " & @TempDir & "\results.txt")
 	If Not @error Then
 		FileSetAttrib(@TempDir & "\results.txt", "-N+H+T", 0)
@@ -162,6 +165,7 @@ Func _DecompileJava()
 
 	$options_app_jad_read = IniRead(@ScriptDir & "\config.ini", "options", "usejad", "0")
 	$options_app_jdgui_read = IniRead(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
+	$options_app_jad_deepness_read = IniRead(@ScriptDir & "\config.ini", "options", "jaddeepness", "5")
 
 	_AddLog("- Converting classes.dex to classes-dex2jar.jar...")
 
@@ -186,17 +190,23 @@ Func _DecompileJava()
 
 		ClipPut($CLIPSAVE)
 		ControlSend("Save", "", "", "{enter}")
-		Sleep(25)
 
-		WinSetTrans("Save All Sources", "", 0)
+		Sleep($interval)
+
 		WinWaitClose("Save All Sources", "")
 
-		ProcessClose("jd-gui.exe")
+		Sleep($interval)
 
-		_AddLog("- Generating Java Code Done!")
+		If FileExists(@ScriptDir & "\tools\classes-dex2jar.src.zip") Then
+			_AddLog("- Generating Java Code Done!")
+		Else
+			_AddLog("- Generating Java Code Failed!")
+		EndIf
 
 		_AddLog("- Extracting Java Code....")
 		RunWait(@ComSpec & " /c " & "7za.exe x -y classes-dex2jar.src.zip -ojavacode", @ScriptDir & "\tools", @SW_HIDE)
+
+		Sleep($interval)
 
 		_AddLog("- Extracting Java Code Done!")
 
@@ -205,6 +215,10 @@ Func _DecompileJava()
 		DirCopy(@ScriptDir & "\tools\javacode", $getpath_outputdir & "\javacode", 1)
 
 		_AddLog("- Copying Java Code Done!")
+
+		ProcessClose("jd-gui.exe")
+
+
 
 	EndIf
 
@@ -219,7 +233,20 @@ Func _DecompileJava()
 		_AddLog("- Extracting class files Done!")
 
 		_AddLog("- Converting class to java files..." & @CRLF & "(This may take several minutes...)")
-		$runjad = Run(@ComSpec & " /c " & "jad -o -r -sjava -dclasscodeout classcode/**/**/**/**/**/*.class", @ScriptDir & "\tools", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
+
+		If $options_app_jad_deepness_read = 1 Then $dirlevel = "/**/*.class"
+		If $options_app_jad_deepness_read = 2 Then $dirlevel = "/**/**/*.class"
+		If $options_app_jad_deepness_read = 3 Then $dirlevel = "/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 4 Then $dirlevel = "/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 5 Then $dirlevel = "/**/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 6 Then $dirlevel = "/**/**/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 7 Then $dirlevel = "/**/**/**/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 8 Then $dirlevel = "/**/**/**/**/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 9 Then $dirlevel = "/**/**/**/**/**/**/**/**/**/*.class"
+		If $options_app_jad_deepness_read = 10 Then $dirlevel = "/**/**/**/**/**/**/**/**/**/**/*.class"
+
+
+		$runjad = Run(@ComSpec & " /c " & "jad -o -r -sjava -dclasscodeout classcode" & $dirlevel, @ScriptDir & "\tools", @SW_HIDE, $STDERR_CHILD + $STDOUT_CHILD)
 
 		Local $line
 		While 1
@@ -263,7 +290,7 @@ Func _MakeEclipse()
 	If FileExists($getpath_outputdir & "\eclipseproject") Then DirRemove($getpath_outputdir & "\eclipseproject", 1)
 
 	_AddLog("- Extracting Example Project..")
-	RunWait(@ComSpec & " /c " & "7za.exe x -y -o" & $getpath_outputdir & "\eclipseproject eclipseproject.zip * ", @ScriptDir & "\tools", @SW_HIDE)
+	RunWait(@ComSpec & " /c " & "7za.exe x -y eclipseproject.zip -o" & $getpath_outputdir & "\eclipseproject", @ScriptDir & "\tools", @SW_HIDE)
 
 	_AddLog("- Importing AndroidManifest.xml...")
 	FileCopy($getpath_outputdir & "\resource\AndroidManifest.xml", $getpath_outputdir & "\eclipseproject\AndroidManifest.xml", 1)
@@ -271,16 +298,29 @@ Func _MakeEclipse()
 	_AddLog("- Importing Resources...")
 	DirCopy($getpath_outputdir & "\resource\res", $getpath_outputdir & "\eclipseproject\res", 1)
 
+	Sleep($interval)
+
 	_AddLog("- Setting Project Name..")
-	Local $namearray
-	$namearray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package"), "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
-	_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray & "</name>")
+	Local $namearray[1]
+	$searchname = _StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package")
+	$namearray = StringRegExp($searchname, "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
+
+	;If package name has been found, continue normal procedure
+	If $namearray[0] <> "" Then
+		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
+	ElseIf $nameapk[0] = "" Then
+		;In case no package name has been found (very unlikely) use apk name
+		$lenstring = StringLen(_GetExtProperty($getpath_apkjar, 0))
+		$nameapk = StringLeft(_GetExtProperty($getpath_apkjar, 0), $lenstring - 3)
+		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $nameapk & "</name>")
+	EndIf
 
 	_AddLog("- Setting Target SDK...")
 	Local $tarsdkarray
+	;In case no target sdk version has been found, set to API 15 (4.0.4)
 	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
-	$write = _FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
-
+	If $tarsdkarray = "0" Then $tarsdkarray = "15"
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
 	_AddLog("- Importing Java Sources...")
 	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
 	_AddLog("- Making Eclipse Project Done!")
@@ -483,7 +523,7 @@ WEnd
 
 Func _PreferencesMenu()
 
-	$optionsGUI = GUICreate("APK to Java Preferences", 260, 165, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $gui)
+	$optionsGUI = GUICreate("APK to Java Preferences", 260, 265, -1, -1, -1, BitOR($WS_EX_TOOLWINDOW, $WS_EX_MDICHILD), $gui)
 	GUISetBkColor(0xefefef, $optionsGUI)
 
 	GUICtrlCreateGroup("Java Generation Preferences:", 5, 5, 250, 65)
@@ -505,17 +545,36 @@ Func _PreferencesMenu()
 		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
 	EndIf
 
-	GUICtrlCreateGroup("Heapsize for decompiling:", 5, 75, 250, 50)
+	GUICtrlCreateGroup("Heapsize for decompiling classes.dex to jar:", 5, 75, 250, 50)
 	GUICtrlCreateLabel("Heapsize:", 15, 98)
 	$options_app_heapsize_read = IniRead(@ScriptDir & "\config.ini", "options", "heapsize", "512")
 	$options_app_heapsize = GUICtrlCreateCombo("", 80, 95, 100, 20, $CBS_DROPDOWNLIST)
 	GUICtrlSetData($options_app_heapsize, "32|64|128|256|512|1024|2048|4096", $options_app_heapsize_read)
 	GUICtrlCreateLabel("MB", 190, 98)
 
-	$options_ok_button = GUICtrlCreateButton("Ok", 5, 140, 80, 20)
-	$options_cancel_button = GUICtrlCreateButton("Cancel", 90, 140, 80, 20)
-	$options_apply_button = GUICtrlCreateButton("Apply", 175, 140, 80, 20)
+	GUICtrlCreateGroup("Decompilation directory deepness level of JAD:", 5, 130, 250, 50)
+	GUICtrlCreateLabel("Deepness:", 15, 153)
+	$options_app_jad_deepness_read = IniRead(@ScriptDir & "\config.ini", "options", "jaddeepness", "5")
+	$options_app_jad_deepness = GUICtrlCreateCombo("", 80, 150, 100, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData($options_app_jad_deepness, "1|2|3|4|5|6|7|8|9|10", $options_app_jad_deepness_read)
+	GUICtrlCreateLabel("Directories", 190, 153)
+	If $options_app_jad_read = 1 Then
+		GUICtrlSetState($options_app_jad_deepness, $GUI_ENABLE)
+	Else
+		GUICtrlSetState($options_app_jad_deepness, $GUI_DISABLE)
+	EndIf
 
+	GUICtrlCreateGroup("Computer Speed / Interval between operations:", 5, 185, 250, 50)
+	GUICtrlCreateLabel("Interval:", 15, 208)
+	$options_app_interval_read = IniRead(@ScriptDir & "\config.ini", "options", "interval", "250")
+	$options_app_interval = GUICtrlCreateCombo("", 80, 205, 100, 20, $CBS_DROPDOWNLIST)
+	GUICtrlSetData($options_app_interval, "0|50|100|150|200|250|300|350|400|450|500|550|600|650|700|750|800|850|950|1000", $options_app_interval_read)
+	GUICtrlCreateLabel("Miliseconds", 190, 208)
+
+
+	$options_ok_button = GUICtrlCreateButton("Ok", 5, 240, 80, 20)
+	$options_cancel_button = GUICtrlCreateButton("Cancel", 90, 240, 80, 20)
+	$options_apply_button = GUICtrlCreateButton("Apply", 175, 240, 80, 20)
 
 	GUISetState(@SW_SHOW, $optionsGUI)
 	GUISwitch($optionsGUI)
@@ -530,6 +589,19 @@ Func _PreferencesMenu()
 				ExitLoop
 
 
+			Case $msg2 = $options_app_jad And BitAND(GUICtrlRead($options_app_jad), $GUI_CHECKED) = $GUI_CHECKED
+				GUICtrlSetState($options_app_jad_deepness, $GUI_ENABLE)
+
+			Case $msg2 = $options_app_jad And BitAND(GUICtrlRead($options_app_jad), $GUI_UnChecked) = $GUI_UnChecked
+				GUICtrlSetState($options_app_jad_deepness, $GUI_DISABLE)
+
+			Case $msg2 = $options_app_jdgui And BitAND(GUICtrlRead($options_app_jdgui), $GUI_CHECKED) = $GUI_CHECKED
+				GUICtrlSetState($options_app_jad_deepness, $GUI_DISABLE)
+
+			Case $msg2 = $options_app_jdgui And BitAND(GUICtrlRead($options_app_jdgui), $GUI_UnChecked) = $GUI_UnChecked
+				GUICtrlSetState($options_app_jad_deepness, $GUI_ENABLE)
+
+
 			Case $msg2 = $options_ok_button
 				If GUICtrlRead($options_app_jdgui) = 1 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
@@ -537,18 +609,23 @@ Func _PreferencesMenu()
 				ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "jaddeepness", GUICtrlRead($options_app_jad_deepness))
 				EndIf
 
 				If GUICtrlRead($options_app_jad) = 1 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "jaddeepness", GUICtrlRead($options_app_jad_deepness))
 				ElseIf GUICtrlRead($options_app_jad) = 4 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
 				EndIf
 
+
+				IniWrite(@ScriptDir & "\config.ini", "options", "interval", GUICtrlRead($options_app_interval))
+
+
 				$heapsize = GUICtrlRead($options_app_heapsize)
-				IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
 				_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
 				GUIDelete($optionsGUI)
 				ExitLoop
@@ -562,11 +639,13 @@ Func _PreferencesMenu()
 				ElseIf GUICtrlRead($options_app_jdgui) = 4 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
+					IniWrite(@ScriptDir & "\config.ini", "options", "jaddeepness", GUICtrlRead($options_app_jad_deepness))
 				EndIf
 
 				If GUICtrlRead($options_app_jad) = 1 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "1")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "0")
+					IniWrite(@ScriptDir & "\config.ini", "options", "jaddeepness", GUICtrlRead($options_app_jad_deepness))
 				ElseIf GUICtrlRead($options_app_jad) = 4 Then
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejad", "0")
 					IniWrite(@ScriptDir & "\config.ini", "options", "usejdgui", "1")
@@ -575,6 +654,8 @@ Func _PreferencesMenu()
 				$heapsize = GUICtrlRead($options_app_heapsize)
 				IniWrite(@ScriptDir & "\config.ini", "options", "heapsize", $heapsize)
 				_FileWriteToLine(@ScriptDir & "\tools\dex2jar.bat", "23", "java -Xms" & $heapsize & "m -cp " & Chr(34) & "%CLASSPATH%" & Chr(34) & " " & Chr(34) & "com.googlecode.dex2jar.tools.Dex2jarCmd" & Chr(34) & " %*", 1)
+
+				IniWrite(@ScriptDir & "\config.ini", "options", "interval", GUICtrlRead($options_app_interval))
 
 				GUICtrlSetStyle($options_apply_button, $WS_DISABLED)
 
