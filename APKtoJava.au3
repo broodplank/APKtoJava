@@ -308,7 +308,7 @@ Func _MakeEclipse()
 	;If package name has been found, continue normal procedure
 	If $namearray[0] <> "" Then
 		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
-	ElseIf $nameapk[0] = "" Then
+	ElseIf $namearray[0] = "" Then
 		;In case no package name has been found (very unlikely) use apk name
 		$lenstring = StringLen(_GetExtProperty($getpath_apkjar, 0))
 		$nameapk = StringLeft(_GetExtProperty($getpath_apkjar, 0), $lenstring - 3)
