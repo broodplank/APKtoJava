@@ -61,8 +61,8 @@ If Not FileExists("tools\apktool.jar") Then
 	MsgBox(16, "APK to Java", "Missing apktool.jar, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists("tools\baksmali-1.4.2.jar") Then
-	MsgBox(16, "APK to Java", "Missing baksmali-1.4.2.jar, please reinstall the application and try again!")
+If Not FileExists("tools\baksmali-1.4.0.jar") Then
+	MsgBox(16, "APK to Java", "Missing baksmali-1.4.0.jar, please reinstall the application and try again!")
 	Exit
 EndIf
 If Not FileExists("tools\jd-gui.exe") Then
@@ -151,7 +151,7 @@ Func _DecompileSmali()
 	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
 
 	_AddLog("- Decompiling to Smali code...")
-	RunWait(@ComSpec & " /c " & "java -jar baksmali-1.4.2.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
+	RunWait(@ComSpec & " /c " & "java -jar baksmali-1.4.0.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 	_AddLog("- Decompiling to Smali Done!")
 
 	_AddLog("- Copying to output dir...")
