@@ -4,7 +4,7 @@
 #AutoIt3Wrapper_Outfile=APKtoJava.exe
 #AutoIt3Wrapper_Outfile_x64=APKtoJava_x64.exe
 #AutoIt3Wrapper_UseUpx=n
-#AutoIt3Wrapper_Res_Description=©2012 broodplank.net
+#AutoIt3Wrapper_Res_Description=ï¿½2012 broodplank.net
 #AutoIt3Wrapper_Res_Fileversion=0.0.3.0
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
@@ -300,26 +300,29 @@ Func _MakeEclipse()
 
 	Sleep($interval)
 
-	_AddLog("- Setting Project Name..")
-	Local $namearray[1]
+        _AddLog("- Setting Project Name..")
+	;Local $namearray[1]
 	$searchname = _StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package")
 	$namearray = StringRegExp($searchname, "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
 
+	ConsoleWrite($namearray)
+
 	;If package name has been found, continue normal procedure
-	If $namearray[0] <> "" Then
-		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
-	ElseIf $namearray[0] = "" Then
+	If $namearray <> "" Then
+		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray & "</name>")
+	ElseIf $namearray = "" Then
 		;In case no package name has been found (very unlikely) use apk name
 		$lenstring = StringLen(_GetExtProperty($getpath_apkjar, 0))
 		$nameapk = StringLeft(_GetExtProperty($getpath_apkjar, 0), $lenstring - 3)
 		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $nameapk & "</name>")
 	EndIf
 
+
 	_AddLog("- Setting Target SDK...")
 	Local $tarsdkarray
-	;In case no target sdk version has been found, set to API 15 (4.0.4)
+	;In case no target sdk version has been found, set to API 17 (4.2.2)
 	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
-	If $tarsdkarray = "0" Then $tarsdkarray = "15"
+	If $tarsdkarray = "0" Then $tarsdkarray = "17"
 	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
 	_AddLog("- Importing Java Sources...")
 	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
@@ -394,7 +397,7 @@ $decompile_zip = GUICtrlCreateCheckbox("Make zip archive of output files", 15, 3
 
 $start_process = GUICtrlCreateButton("Start Decompilation Process!", 5, 420, 290, 25)
 
-$copyright = GUICtrlCreateLabel("©2012 broodplank.net - All Rights Reserved", 5, 453)
+$copyright = GUICtrlCreateLabel("ï¿½2012 broodplank.net - All Rights Reserved", 5, 453)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 GUISetState()
