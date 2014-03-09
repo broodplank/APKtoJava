@@ -1,14 +1,14 @@
 #NoTrayIcon
-#region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=apktojavaicon_trans.ico
 #AutoIt3Wrapper_Outfile=APKtoJava.exe
 #AutoIt3Wrapper_Outfile_x64=APKtoJava_x64.exe
 #AutoIt3Wrapper_UseUpx=n
-#AutoIt3Wrapper_Res_Description=ï¿½2012 broodplank.net
+#AutoIt3Wrapper_Res_Description=©2014 broodplank.net
 #AutoIt3Wrapper_Res_Fileversion=0.0.3.0
 #AutoIt3Wrapper_Run_Tidy=y
 #AutoIt3Wrapper_Run_Obfuscator=y
-#endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 ;No tray icon
 
 ;Match window titles by any substring matched
@@ -61,8 +61,8 @@ If Not FileExists("tools\apktool.jar") Then
 	MsgBox(16, "APK to Java", "Missing apktool.jar, please reinstall the application and try again!")
 	Exit
 EndIf
-If Not FileExists("tools\baksmali-1.4.2.jar") Then
-	MsgBox(16, "APK to Java", "Missing baksmali-1.4.2.jar, please reinstall the application and try again!")
+If Not FileExists("tools\baksmali-2.0.3.jar") Then
+	MsgBox(16, "APK to Java", "Missing baksmali-2.0.3.jar, please reinstall the application and try again!")
 	Exit
 EndIf
 If Not FileExists("tools\jd-gui.exe") Then
@@ -97,7 +97,7 @@ Func FixConfig()
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "LoadPath", StringReplace($localdir, "\", "\\", 0))
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentDirectories", "SavePath", StringReplace($localdir, "\", "\\", 0))
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "Manifest", "Version", "2")
-	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "Update", "CurrentVersion", "0.3.3")
+	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "Update", "CurrentVersion", "0.3.6")
 	IniWrite(@ScriptDir & "\tools\jd-gui.cfg", "RecentFiles", "Path0", StringReplace($localdir, "\", "\\", 0) & "classes_dex2jar.jar")
 EndFunc   ;==>FixConfig
 
@@ -151,7 +151,7 @@ Func _DecompileSmali()
 	If FileExists(@ScriptDir & "\tools\smalicode") Then DirRemove(@ScriptDir & "\tools\smalicode", 1)
 
 	_AddLog("- Decompiling to Smali code...")
-	RunWait(@ComSpec & " /c " & "java -jar baksmali-1.4.2.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
+	RunWait(@ComSpec & " /c " & "java -jar baksmali-2.0.3.jar -o smalicode/ classes.dex", @ScriptDir & "\tools", @SW_HIDE)
 	_AddLog("- Decompiling to Smali Done!")
 
 	_AddLog("- Copying to output dir...")
@@ -300,7 +300,7 @@ Func _MakeEclipse()
 
 	Sleep($interval)
 
-        _AddLog("- Setting Project Name..")
+	_AddLog("- Setting Project Name..")
 	;Local $namearray[1]
 	$searchname = _StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "package")
 	$namearray = StringRegExp($searchname, "package=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
@@ -397,7 +397,7 @@ $decompile_zip = GUICtrlCreateCheckbox("Make zip archive of output files", 15, 3
 
 $start_process = GUICtrlCreateButton("Start Decompilation Process!", 5, 420, 290, 25)
 
-$copyright = GUICtrlCreateLabel("ï¿½2012 broodplank.net - All Rights Reserved", 5, 453)
+$copyright = GUICtrlCreateLabel("©2014 broodplank.net - All Rights Reserved", 5, 453)
 GUICtrlSetStyle($copyright, $WS_DISABLED)
 
 GUISetState()
@@ -602,14 +602,14 @@ Func _PreferencesMenu()
 		GUICtrlSetState($options_app_jad, $GUI_UnChecked)
 	EndIf
 
-	GUICtrlCreateGroup("Heapsize for decompilation (Java):", 5, 75, 250, 50)
+	GUICtrlCreateGroup("Java heapsize for decompilation (Java):", 5, 75, 250, 50)
 	GUICtrlCreateLabel("Heapsize:", 15, 98)
 	$options_app_heapsize_read = IniRead(@ScriptDir & "\config.ini", "options", "heapsize", "512")
 	$options_app_heapsize = GUICtrlCreateCombo("", 80, 95, 100, 20, $CBS_DROPDOWNLIST)
 	GUICtrlSetData($options_app_heapsize, "32|64|128|256|512|1024|2048|4096", $options_app_heapsize_read)
 	GUICtrlCreateLabel("MB", 190, 98)
 
-	GUICtrlCreateGroup("Decompilation directory deepness level of JAD:", 5, 130, 250, 50)
+	GUICtrlCreateGroup("Decompilation directory depth level of JAD:", 5, 130, 250, 50)
 	GUICtrlCreateLabel("Deepness:", 15, 153)
 	$options_app_jad_deepness_read = IniRead(@ScriptDir & "\config.ini", "options", "jaddeepness", "5")
 	$options_app_jad_deepness = GUICtrlCreateCombo("", 80, 150, 100, 20, $CBS_DROPDOWNLIST)
