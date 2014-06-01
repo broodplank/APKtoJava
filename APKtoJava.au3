@@ -308,9 +308,9 @@ Func _MakeEclipse()
 	ConsoleWrite($namearray)
 
 	;If package name has been found, continue normal procedure
-	If $namearray <> "" Then
-		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray & "</name>")
-	ElseIf $namearray = "" Then
+	If UBound($namearray) > 0 And $namearray[0] <> "" Then
+		_FileWriteToLine($getpath_outputdir & "\eclipseproject\.project", 3, "        <name>" & $namearray[0] & "</name>")
+	Else
 		;In case no package name has been found (very unlikely) use apk name
 		$lenstring = StringLen(_GetExtProperty($getpath_apkjar, 0))
 		$nameapk = StringLeft(_GetExtProperty($getpath_apkjar, 0), $lenstring - 3)
@@ -319,11 +319,16 @@ Func _MakeEclipse()
 
 
 	_AddLog("- Setting Target SDK...")
-	Local $tarsdkarray
+	Local $tarsdk
 	;In case no target sdk version has been found, set to API 17 (4.2.2)
 	$tarsdkarray = StringRegExp(_StringSearchInFile($getpath_outputdir & "\eclipseproject\AndroidManifest.xml", "android:targetSdkVersion"), "android:targetSdkVersion=" & Chr(34) & "(.*?)" & Chr(34), 1, 1)
-	If $tarsdkarray = "0" Then $tarsdkarray = "17"
-	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdkarray, 1)
+	If UBound($tarsdkarray) == 0 Or $tarsdkarray[0] == "" Then 
+		$tarsdk = "19" ;latest
+	Else	
+		$tarsdk = $tarsdkarray[0]
+	EndIf	
+ 
+	_FileWriteToLine($getpath_outputdir & "\eclipseproject\project.properties", 14, "target=android-" & $tarsdk, 1)
 	_AddLog("- Importing Java Sources...")
 	DirCopy($getpath_outputdir & "\javacode\com", $getpath_outputdir & "\eclipseproject\src\com", 1)
 	_AddLog("- Making Eclipse Project Done!")
